@@ -1,3 +1,4 @@
+import { requireAdminPage } from '@/lib/auth-server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { StatusPill } from '@/components/ui/status-pill'
 import { formatDateTime } from '../_lib/format'
@@ -15,6 +16,7 @@ interface EscalationRow {
 }
 
 export default async function EscalationsPage() {
+  await requireAdminPage()
   const admin = createAdminClient()
   const { data } = await admin
     .from('escalations')

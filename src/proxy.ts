@@ -5,7 +5,10 @@ import type { NextRequest } from 'next/server'
 // Next.js 16 renamed the `middleware.ts` convention to `proxy.ts` (same
 // runtime behavior, new name/export) — see the "Migration to Proxy" section
 // of node_modules/next/dist/docs/01-app/03-api-reference/03-file-conventions/proxy.md.
-const PUBLIC_PATHS = ['/login']
+// '/api/keepalive' is hit by Vercel Cron with no session cookie — its own
+// `CRON_SECRET` header check (src/app/api/keepalive/route.ts) is the gate,
+// so it must not be redirected to /login here first.
+const PUBLIC_PATHS = ['/login', '/api/keepalive']
 
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })

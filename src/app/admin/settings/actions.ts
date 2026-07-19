@@ -76,12 +76,17 @@ export async function saveAndVerifyKey(_prev: ActionState, formData: FormData): 
   }
 }
 
-const ragSchema = z.object({
-  chunkSize: z.coerce.number().int().min(128).max(4096),
-  chunkOverlap: z.coerce.number().int().min(0),
-  matchThreshold: z.coerce.number().min(0).max(1),
-  matchCount: z.coerce.number().int().min(1).max(20),
-})
+const ragSchema = z
+  .object({
+    chunkSize: z.coerce.number().int().min(128).max(4096),
+    chunkOverlap: z.coerce.number().int().min(0),
+    matchThreshold: z.coerce.number().min(0).max(1),
+    matchCount: z.coerce.number().int().min(1).max(20),
+  })
+  .refine((data) => data.chunkOverlap < data.chunkSize, {
+    message: 'Overlap must be smaller than chunk size.',
+    path: ['chunkOverlap'],
+  })
 
 export async function saveRagSettings(_prev: ActionState, formData: FormData): Promise<ActionState> {
   let ctx

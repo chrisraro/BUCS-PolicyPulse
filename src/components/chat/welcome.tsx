@@ -52,22 +52,16 @@ export function Welcome({ hasIndexedDocs, isAdmin, assistantOffline, onPrompt }:
         </h1>
         <p className="max-w-sm text-sm text-muted">
           {isAdmin
-            ? 'The chat can’t answer until at least one policy document is indexed and an AI key is saved.'
+            ? 'The chat can’t answer until at least one policy document is indexed.'
             : 'The assistant isn’t ready yet — ask an administrator to add policy documents.'}
         </p>
         {isAdmin ? (
           <div className="mt-2 flex flex-wrap justify-center gap-3">
             <Link
               href="/admin/documents"
-              className="inline-flex h-10 items-center rounded-input border border-border px-4 text-sm font-medium text-ink hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
-            >
-              Upload a document
-            </Link>
-            <Link
-              href="/admin/settings"
               className="inline-flex h-10 items-center rounded-input bg-primary px-4 text-sm font-medium text-primary-ink hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
             >
-              Add AI key
+              Upload a document
             </Link>
           </div>
         ) : null}

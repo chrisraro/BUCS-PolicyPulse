@@ -1,3 +1,4 @@
+import { requireAdminPage } from '@/lib/auth-server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { StatusPill, type StatusPillKind } from '@/components/ui/status-pill'
 import { formatDate } from '../_lib/format'
@@ -17,6 +18,7 @@ interface DocumentRow {
 }
 
 export default async function DocumentsPage() {
+  await requireAdminPage()
   const admin = createAdminClient()
   const { data } = await admin
     .from('documents')

@@ -28,6 +28,7 @@ export default async function Home() {
   const { data: sessions } = await supabase
     .from('chat_sessions')
     .select('id, title, updated_at')
+    .eq('user_id', user.id)
     .order('updated_at', { ascending: false })
 
   // RLS scopes this to documents the viewer's role may see; explicitly

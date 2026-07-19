@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { cn } from '@/lib/cn'
+import { requireAdminPage } from '@/lib/auth-server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { excerpt, formatDateTime } from '../_lib/format'
 
@@ -19,6 +20,7 @@ export default async function FeedbackPage({
 }: {
   searchParams: Promise<{ rating?: string }>
 }) {
+  await requireAdminPage()
   const { rating } = await searchParams
   const activeRating = rating === 'up' || rating === 'down' ? rating : undefined
 

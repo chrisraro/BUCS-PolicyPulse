@@ -6,7 +6,10 @@ export const runtime = 'nodejs'
 // from its 1-week-inactivity pause.
 export async function GET(req: Request) {
   const secret = process.env.CRON_SECRET
-  if (secret && req.headers.get('authorization') !== `Bearer ${secret}`) {
+  if (!secret) {
+    return Response.json({ error: 'cron_secret_not_configured' }, { status: 500 })
+  }
+  if (req.headers.get('authorization') !== `Bearer ${secret}`) {
     return Response.json({ error: 'unauthorized' }, { status: 401 })
   }
   const admin = createAdminClient()

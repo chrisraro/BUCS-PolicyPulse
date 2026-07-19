@@ -1,3 +1,4 @@
+import { requireAdminPage } from '@/lib/auth-server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { maskKey } from '@/lib/ai/mask'
 import type { RagSettings } from '@/lib/rag/settings'
@@ -15,6 +16,7 @@ interface AiSettingsRow {
 }
 
 export default async function AiSettingsPage() {
+  await requireAdminPage()
   const admin = createAdminClient()
   const [{ data: aiSettings }, { data: ragSettings }] = await Promise.all([
     admin

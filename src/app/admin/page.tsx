@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { requireAdminPage } from '@/lib/auth-server'
 import { createAdminClient } from '@/lib/supabase/admin'
 
 export const dynamic = 'force-dynamic'
@@ -57,6 +58,7 @@ async function getCounts(): Promise<DashboardCounts> {
 }
 
 export default async function AdminDashboardPage() {
+  await requireAdminPage()
   const counts = await getCounts()
   const docsIndexed = counts.indexedDocuments > 0
   const setupComplete = counts.keyVerified && docsIndexed
