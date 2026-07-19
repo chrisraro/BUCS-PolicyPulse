@@ -100,6 +100,14 @@ export async function POST(req: Request) {
 
   const model = chatModelFor(cfg.provider, cfg.apiKey, cfg.chatModel)
 
+  // Free-tier token budgets are per-MINUTE (Groq 8b: 6,000 TPM) and count the
+  // whole request. Bound both sides: only the most recent turns go to the
+  // model (retrieval context is rebuilt per question anyway, so old turns add
+  // cost, not grounding), and output is capped.
+  const HISTORY_LIMIT = 8
+  const recentMessages = body.messages.slice(-HISTORY_LIMIT)
+  const MAX_OUTPUT_TOKENS = 1024
+
   let citations: Citation[] = []
 
   async function buildResult() {
@@ -107,7 +115,8 @@ export async function POST(req: Request) {
       ? streamText({
           model,
           system: buildAgenticSystemPrompt(),
-          messages: await convertToModelMessages(body.messages),
+          messages: await convertToModelMessages(recentMessages),
+          maxOutputTokens: MAX_OUTPUT_TOKENS,
           stopWhen: isStepCount(4),
           tools: {
             search_policies: tool({
@@ -140,7 +149,8 @@ export async function POST(req: Request) {
           return streamText({
             model,
             system: buildSystemPrompt(excerpts),
-            messages: await convertToModelMessages(body.messages),
+            messages: await convertToModelMessages(recentMessages),
+            maxOutputTokens: MAX_OUTPUT_TOKENS,
           })
         })()
   }
