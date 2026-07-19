@@ -1,5 +1,20 @@
 import { describe, expect, it } from 'vitest'
-import { toVectors } from '../embeddings'
+import { chunkArray, toVectors } from '../embeddings'
+
+describe('chunkArray', () => {
+  it('splits 5 items into batches of 2 as [2,2,1]', () => {
+    expect(chunkArray([1, 2, 3, 4, 5], 2)).toEqual([[1, 2], [3, 4], [5]])
+  })
+  it('returns one batch when size exceeds length', () => {
+    expect(chunkArray(['a', 'b'], 16)).toEqual([['a', 'b']])
+  })
+  it('returns no batches for an empty array', () => {
+    expect(chunkArray([], 4)).toEqual([])
+  })
+  it('rejects a size below 1', () => {
+    expect(() => chunkArray([1], 0)).toThrow('size must be >= 1')
+  })
+})
 
 describe('toVectors', () => {
   it('reshapes a flat 2x3 array into two row vectors', () => {

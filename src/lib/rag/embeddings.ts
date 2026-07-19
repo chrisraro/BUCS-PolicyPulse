@@ -46,6 +46,20 @@ function getEmbedder(): Promise<FeatureExtractionPipeline> {
   return embedderPromise
 }
 
+// Verified in production: a single-text embed succeeds, but one native call
+// over an 88-page document's ~hundreds of chunks aborts the whole function
+// (tensor allocation in onnxruntime). Sequential small batches bound native
+// memory; throughput is still fine within the 300s function ceiling.
+export const EMBED_BATCH_SIZE = 16
+
+/** Pure batching helper — unit tested without loading the model. */
+export function chunkArray<T>(items: T[], size: number): T[][] {
+  if (size < 1) throw new Error(`chunkArray: size must be >= 1, got ${size}`)
+  const out: T[][] = []
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size))
+  return out
+}
+
 /**
  * Embeds one or more texts locally via Supabase/gte-small — no API key, no
  * quota, no network dependency beyond the one-time model download. Used for
@@ -55,7 +69,11 @@ function getEmbedder(): Promise<FeatureExtractionPipeline> {
 export async function embedTexts(texts: string[]): Promise<number[][]> {
   if (texts.length === 0) return []
   const embedder = await getEmbedder()
-  const output = await embedder(texts, { pooling: 'mean', normalize: true })
-  const [count, dims] = output.dims
-  return toVectors(output.data as Float32Array, count, dims)
+  const vectors: number[][] = []
+  for (const batch of chunkArray(texts, EMBED_BATCH_SIZE)) {
+    const output = await embedder(batch, { pooling: 'mean', normalize: true })
+    const [count, dims] = output.dims
+    vectors.push(...toVectors(output.data as Float32Array, count, dims))
+  }
+  return vectors
 }
