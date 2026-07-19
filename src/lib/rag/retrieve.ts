@@ -14,12 +14,11 @@ export interface MatchResult {
 
 export async function searchPolicies(
   admin: SupabaseClient,
-  apiKey: string,
   query: string,
   role: UserRole,
   settings: RagSettings,
 ): Promise<MatchResult[]> {
-  const [embedding] = await embedTexts(apiKey, [query], 'RETRIEVAL_QUERY')
+  const [embedding] = await embedTexts([query])
   const { data, error } = await admin.rpc('match_document_chunks', {
     query_embedding: embedding,
     match_threshold: settings.match_threshold,

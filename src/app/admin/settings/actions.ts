@@ -5,8 +5,10 @@ import { generateText } from 'ai'
 import { revalidatePath } from 'next/cache'
 import { requireAdmin } from '@/lib/auth-server'
 import { createAdminClient } from '@/lib/supabase/admin'
-import { gemini } from '@/lib/ai/config'
+import { chatModelFor, type ChatProvider } from '@/lib/ai/config'
 import type { ActionState } from '../_lib/action-state'
+
+const PROVIDERS: ChatProvider[] = ['gemini', 'groq']
 
 export async function saveAndVerifyKey(_prev: ActionState, formData: FormData): Promise<ActionState> {
   try {
@@ -15,8 +17,13 @@ export async function saveAndVerifyKey(_prev: ActionState, formData: FormData): 
     return { status: 'error', message: 'Admin access required.' }
   }
 
+  const providerInput = String(formData.get('provider') ?? 'gemini')
+  const provider: ChatProvider = PROVIDERS.includes(providerInput as ChatProvider)
+    ? (providerInput as ChatProvider)
+    : 'gemini'
+
   const apiKeyInput = String(formData.get('apiKey') ?? '').trim()
-  const modelSelect = String(formData.get('chatModel') ?? 'gemini-2.5-flash')
+  const modelSelect = String(formData.get('chatModel') ?? '')
   const customModel = String(formData.get('customModel') ?? '').trim()
   const retrievalModeInput = String(formData.get('retrievalMode') ?? 'single_call')
 
@@ -29,6 +36,7 @@ export async function saveAndVerifyKey(_prev: ActionState, formData: FormData): 
   const admin = createAdminClient()
 
   const update: Record<string, unknown> = {
+    provider,
     chat_model: chatModel,
     retrieval_mode: retrievalMode,
     updated_at: new Date().toISOString(),
@@ -43,6 +51,9 @@ export async function saveAndVerifyKey(_prev: ActionState, formData: FormData): 
     return { status: 'error', message: `Could not save settings: ${updateError.message}` }
   }
 
+  // If the provider changed but the key field was left blank, this verifies
+  // the *previously stored* key (from the old provider) against the new
+  // one — expected to fail until the admin pastes a matching key.
   let apiKey = apiKeyInput
   if (!apiKey) {
     const { data } = await admin.from('ai_settings').select('api_key').eq('id', 1).single()
@@ -56,7 +67,7 @@ export async function saveAndVerifyKey(_prev: ActionState, formData: FormData): 
 
   try {
     await generateText({
-      model: gemini(apiKey)(chatModel),
+      model: chatModelFor(provider, apiKey, chatModel),
       prompt: 'ping',
       maxOutputTokens: 1,
     })

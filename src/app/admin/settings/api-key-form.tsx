@@ -4,36 +4,52 @@ import * as React from 'react'
 import { useActionState } from 'react'
 import { Button } from '@/components/ui/button'
 import { StatusPill } from '@/components/ui/status-pill'
+import { PROVIDER_META, type ChatProvider } from '@/lib/ai/provider'
 import { initialActionState } from '../_lib/action-state'
 import { saveAndVerifyKey } from './actions'
 
-const MODEL_OPTIONS = [
-  { value: 'gemini-2.5-flash', label: 'gemini-2.5-flash (recommended)' },
-  { value: 'gemini-2.5-flash-lite', label: 'gemini-2.5-flash-lite (higher free limits)' },
-  { value: 'custom', label: 'Custom…' },
-] as const
+const PROVIDERS = Object.keys(PROVIDER_META) as ChatProvider[]
 
-const KNOWN_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite']
+const KEY_COPY: Record<ChatProvider, string> = {
+  gemini:
+    'Create a free API key at aistudio.google.com — no billing account needed. Embeddings run locally, so this one key only powers chat.',
+  groq: 'Create a free API key at console.groq.com — no card needed. Embeddings run locally, so this one key powers the whole chat.',
+}
 
 const inputClass =
   'h-11 rounded-input border border-border bg-bg px-3 text-sm text-ink ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface'
 
 export function ApiKeyForm({
+  provider,
   maskedKey,
   chatModel,
   retrievalMode,
   verifiedAt,
 }: {
+  provider: ChatProvider
   maskedKey: string | null
   chatModel: string
   retrievalMode: 'single_call' | 'agentic'
   verifiedAt: string | null
 }) {
   const [state, formAction, pending] = useActionState(saveAndVerifyKey, initialActionState)
-  const isCustomModel = !KNOWN_MODELS.includes(chatModel)
-  const [modelSelect, setModelSelect] = React.useState(isCustomModel ? 'custom' : chatModel)
-  const [customModel, setCustomModel] = React.useState(isCustomModel ? chatModel : '')
+  const [providerSelect, setProviderSelect] = React.useState<ChatProvider>(provider)
+  const meta = PROVIDER_META[providerSelect]
+  const knownModels = meta.models.map((m) => m.id)
+  const initialIsCustom = !PROVIDER_META[provider].models.some((m) => m.id === chatModel)
+  const [modelSelect, setModelSelect] = React.useState(
+    initialIsCustom ? 'custom' : chatModel,
+  )
+  const [customModel, setCustomModel] = React.useState(initialIsCustom ? chatModel : '')
+
+  function handleProviderChange(next: ChatProvider) {
+    setProviderSelect(next)
+    setModelSelect(PROVIDER_META[next].models[0].id)
+    setCustomModel('')
+  }
+
+  const showVerified = Boolean(verifiedAt) && providerSelect === provider
 
   return (
     <form
@@ -42,19 +58,30 @@ export function ApiKeyForm({
     >
       <div>
         <h2 className="text-sm font-semibold text-ink">Provider</h2>
-        <p className="mt-1 text-sm text-muted">
-          Create a free API key at aistudio.google.com — no billing account needed. This one key
-          powers both chat and document indexing.
-        </p>
+        <p className="mt-1 text-sm text-muted">{KEY_COPY[providerSelect]}</p>
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-ink">Provider</span>
+        <label htmlFor="provider" className="text-sm font-medium text-ink">
+          Chat provider
+        </label>
         <div className="flex items-center gap-2">
-          <p className="text-sm text-ink">Gemini</p>
+          <select
+            id="provider"
+            name="provider"
+            value={providerSelect}
+            onChange={(event) => handleProviderChange(event.target.value as ChatProvider)}
+            className={inputClass}
+          >
+            {PROVIDERS.map((p) => (
+              <option key={p} value={p}>
+                {PROVIDER_META[p].label}
+              </option>
+            ))}
+          </select>
           <StatusPill
-            kind={verifiedAt ? 'indexed' : 'pending'}
-            label={verifiedAt ? 'Key verified' : 'Not verified'}
+            kind={showVerified ? 'indexed' : 'pending'}
+            label={showVerified ? 'Key verified' : 'Not verified'}
           />
         </div>
       </div>
@@ -68,7 +95,7 @@ export function ApiKeyForm({
           name="apiKey"
           type="password"
           autoComplete="off"
-          placeholder={maskedKey ?? 'Paste your Gemini API key'}
+          placeholder={maskedKey ?? `Paste your ${meta.label} API key`}
           className={inputClass}
         />
         <p className="text-xs text-muted">
@@ -87,11 +114,12 @@ export function ApiKeyForm({
           onChange={(event) => setModelSelect(event.target.value)}
           className={inputClass}
         >
-          {MODEL_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
+          {meta.models.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.id} ({option.note})
             </option>
           ))}
+          <option value="custom">Custom…</option>
         </select>
         {modelSelect === 'custom' ? (
           <input
@@ -99,7 +127,7 @@ export function ApiKeyForm({
             name="customModel"
             value={customModel}
             onChange={(event) => setCustomModel(event.target.value)}
-            placeholder="e.g. gemini-2.5-pro"
+            placeholder={`e.g. ${knownModels[0]}`}
             required
             className={`mt-1 ${inputClass}`}
           />

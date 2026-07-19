@@ -1,6 +1,7 @@
 import { requireAdminPage } from '@/lib/auth-server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { maskKey } from '@/lib/ai/mask'
+import { DEFAULT_MODEL, type ChatProvider } from '@/lib/ai/provider'
 import type { RagSettings } from '@/lib/rag/settings'
 import { ApiKeyForm } from './api-key-form'
 import { RetrievalTuningForm } from './retrieval-tuning-form'
@@ -8,7 +9,7 @@ import { RetrievalTuningForm } from './retrieval-tuning-form'
 export const dynamic = 'force-dynamic'
 
 interface AiSettingsRow {
-  provider: string
+  provider: ChatProvider
   chat_model: string
   api_key: string | null
   verified_at: string | null
@@ -35,19 +36,22 @@ export default async function AiSettingsPage() {
   const rag = ragSettings as RagSettings | null
 
   const maskedKey = settings?.api_key ? maskKey(settings.api_key) : null
+  const provider: ChatProvider = settings?.provider ?? 'gemini'
 
   return (
     <div className="flex flex-col gap-8">
       <div>
         <h1 className="text-2xl font-semibold text-ink">AI Settings</h1>
         <p className="mt-1 text-sm text-muted">
-          One key powers the whole assistant — chat answers and document indexing.
+          This key powers chat answers. Document indexing runs on a local, keyless embedding
+          model, so it works regardless of which provider you choose here.
         </p>
       </div>
 
       <ApiKeyForm
+        provider={provider}
         maskedKey={maskedKey}
-        chatModel={settings?.chat_model ?? 'gemini-2.5-flash'}
+        chatModel={settings?.chat_model ?? DEFAULT_MODEL[provider]}
         retrievalMode={settings?.retrieval_mode ?? 'single_call'}
         verifiedAt={settings?.verified_at ?? null}
       />

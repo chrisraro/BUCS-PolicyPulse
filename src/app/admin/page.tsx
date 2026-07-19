@@ -91,7 +91,7 @@ export default async function AdminDashboardPage() {
                 href="/admin/settings"
                 className="flex min-h-11 items-center justify-between gap-3 rounded-input px-3 py-2 text-sm hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
               >
-                <span className="text-ink">1. Save &amp; verify your Gemini API key</span>
+                <span className="text-ink">1. Save &amp; verify your AI provider API key</span>
                 {counts.keyVerified ? (
                   <span className="shrink-0 text-success">✓ Done</span>
                 ) : (

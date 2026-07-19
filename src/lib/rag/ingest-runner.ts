@@ -1,5 +1,4 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { AiNotConfiguredError, getAiConfig } from '@/lib/ai/config'
 import { chunkText, embedTexts, extractDocText } from './ingest'
 import { getRagSettings } from './settings'
 
@@ -12,15 +11,6 @@ export async function runIngest(
 
   await admin.from('documents').update({ status: 'processing', error: null }).eq('id', doc.id)
   try {
-    let apiKey: string
-    try {
-      apiKey = (await getAiConfig()).apiKey
-    } catch (e) {
-      if (e instanceof AiNotConfiguredError)
-        throw new Error('Add your Gemini API key in AI Settings first')
-      throw e
-    }
-
     const { data: blob, error: dlErr } = await admin.storage
       .from('policy-documents')
       .download(doc.storage_path)
@@ -31,7 +21,7 @@ export async function runIngest(
 
     const settings = await getRagSettings(admin)
     const chunks = chunkText(text, settings.chunk_size, settings.chunk_overlap)
-    const embeddings = await embedTexts(apiKey, chunks, 'RETRIEVAL_DOCUMENT')
+    const embeddings = await embedTexts(chunks)
 
     // re-index safe: replace previous chunks
     await admin.from('document_chunks').delete().eq('document_id', doc.id)

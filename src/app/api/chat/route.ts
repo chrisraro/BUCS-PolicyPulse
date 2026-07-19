@@ -6,7 +6,7 @@ import {
   type UIMessage,
 } from 'ai'
 import { z } from 'zod'
-import { AiNotConfiguredError, gemini, getAiConfig, type AiConfig } from '@/lib/ai/config'
+import { AiNotConfiguredError, chatModelFor, getAiConfig, type AiConfig } from '@/lib/ai/config'
 import { requireUser } from '@/lib/auth-server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { assignCitations, citedInText, type Citation } from '@/lib/rag/citations'
@@ -98,7 +98,7 @@ export async function POST(req: Request) {
     sessionId = await createSession(admin, ctx.user.id, question)
   }
 
-  const model = gemini(cfg.apiKey)(cfg.chatModel)
+  const model = chatModelFor(cfg.provider, cfg.apiKey, cfg.chatModel)
 
   let citations: Citation[] = []
 
@@ -117,7 +117,7 @@ export async function POST(req: Request) {
                 query: z.string().describe('Focused search query for the needed policy information'),
               }),
               execute: async ({ query }) => {
-                const results = await searchPolicies(admin, cfg.apiKey, query, ctx.role, settings)
+                const results = await searchPolicies(admin, query, ctx.role, settings)
                 const assigned = assignCitations(citations, results)
                 citations = assigned.citations
                 return assigned.forModel.length
@@ -131,7 +131,7 @@ export async function POST(req: Request) {
           // Zero matches from a *successful* call is a normal "(none found …)"
           // outcome and must still reach the model — only a thrown error
           // (e.g. an embedding 429) should short-circuit below.
-          const results = await singleCallRetrieve(admin, cfg, question, ctx.role, settings)
+          const results = await singleCallRetrieve(admin, question, ctx.role, settings)
           const assigned = assignCitations([], results)
           citations = assigned.citations
           const excerpts = assigned.forModel
@@ -194,10 +194,9 @@ export async function POST(req: Request) {
 // and still resolves to `[]` as before.
 async function singleCallRetrieve(
   admin: SupabaseClient,
-  cfg: AiConfig,
   question: string,
   role: UserRole,
   settings: RagSettings,
 ) {
-  return await searchPolicies(admin, cfg.apiKey, question, role, settings)
+  return await searchPolicies(admin, question, role, settings)
 }

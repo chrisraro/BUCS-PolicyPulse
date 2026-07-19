@@ -11,7 +11,9 @@
   },
   "dependencies": {
     "@ai-sdk/google": "^4.0.18",
+    "@ai-sdk/groq": "^4.0.12",
     "@ai-sdk/react": "^4.0.34",
+    "@huggingface/transformers": "^3.8.1",
     "@supabase/ssr": "^0.12.3",
     "@supabase/supabase-js": "^2.110.7",
     "ai": "^7.0.31",
