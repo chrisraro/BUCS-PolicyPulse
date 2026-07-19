@@ -69,7 +69,7 @@ export function AuthGateDialog({ open, onClose, onAuthenticated }: AuthGateDialo
         password,
       })
       if (signInError) {
-        setError(mapAuthError(signInError.message))
+        setError(mapAuthError(signInError.message, 'signin'))
         return
       }
       if (data.session) {
@@ -99,7 +99,7 @@ export function AuthGateDialog({ open, onClose, onAuthenticated }: AuthGateDialo
         options: { data: { full_name: fullName.trim() } },
       })
       if (signUpError) {
-        setError(mapAuthError(signUpError.message))
+        setError(mapAuthError(signUpError.message, 'signup'))
         return
       }
       if (data.session) {
@@ -237,8 +237,12 @@ export function AuthGateDialog({ open, onClose, onAuthenticated }: AuthGateDialo
  * (`enforce_email_domain`) rejects outside-domain signups even if the
  * client-side `isAllowedSignupEmail` pre-check were somehow bypassed — map
  * its error to the same friendly domain message used on the login page.
+ *
+ * The fallback never echoes the raw Supabase message back to the visitor —
+ * that string can carry provider-internal details that aren't ours to leak.
+ * Everything unmapped gets a mode-appropriate generic instead.
  */
-function mapAuthError(message: string): string {
+function mapAuthError(message: string, mode: Mode): string {
   if (message.includes('restricted to @bicol-u.edu.ph')) return SIGNUP_DOMAIN_ERROR
   if (/invalid login credentials/i.test(message)) {
     return 'That email or password is incorrect.'
@@ -246,5 +250,7 @@ function mapAuthError(message: string): string {
   if (/already registered|already exists/i.test(message)) {
     return 'An account with that email already exists — sign in instead.'
   }
-  return message
+  return mode === 'signup'
+    ? 'Sign-up failed — try again.'
+    : 'Sign-in failed — check your email and password and try again.'
 }

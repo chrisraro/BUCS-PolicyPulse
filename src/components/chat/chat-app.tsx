@@ -280,9 +280,30 @@ export function ChatApp({ initialSessions, user, hasIndexedDocs, isAdmin, assist
    * held guest message, persist it to sessionStorage and reload — the
    * server components re-render authenticated, and the mount effect above
    * picks the message back up and sends it through the normal path.
+   *
+   * If sessionStorage itself is unavailable (private-mode quota, storage
+   * disabled), `savePending` returns `false` and a reload would silently
+   * drop the message — the mount effect would find nothing to pick back up.
+   * Instead, send it directly through the already-mounted `chat` instance:
+   * the browser Supabase client just set auth cookies, so `/api/chat`
+   * accepts the request even though server-rendered props (the sidebar,
+   * `user`) stay stale until the next navigation. Degraded but honest —
+   * the message still gets through, which is the product promise.
    */
   function handleAuthenticated() {
-    if (pendingGuestText) savePending(pendingGuestText)
+    if (pendingGuestText) {
+      const saved = savePending(pendingGuestText)
+      if (!saved) {
+        const text = pendingGuestText
+        setAuthGateOpen(false)
+        setPendingGuestText(null)
+        if (!activeSessionId) {
+          pendingTitleRef.current = text.slice(0, 60) || 'New chat'
+        }
+        void chat.sendMessage({ text })
+        return
+      }
+    }
     window.location.reload()
   }
 
@@ -488,10 +509,10 @@ function GuestHeldMessage({
         Sign in with your BU email to send this message.
       </p>
       <div className="flex flex-wrap justify-center gap-3">
-        <Button variant="primary" onClick={onSignIn}>
+        <Button variant="primary" size="touch" onClick={onSignIn}>
           Sign in to send
         </Button>
-        <Button variant="ghost" onClick={onDiscard}>
+        <Button variant="ghost" size="touch" onClick={onDiscard}>
           Discard
         </Button>
       </div>

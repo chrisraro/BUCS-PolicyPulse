@@ -22,15 +22,22 @@ function resolveStorage(storage?: Storage): Storage | null {
   return null
 }
 
-/** Saves the guest's pending message. Silently no-ops if storage is unavailable. */
-export function savePending(text: string, storage?: Storage): void {
+/**
+ * Saves the guest's pending message. Returns `true` on a successful write,
+ * `false` when storage is unavailable or the write itself throws (private-mode
+ * quota, storage disabled, etc.) — callers use this to fall back to sending
+ * the message directly instead of relying on a reload to pick it back up.
+ */
+export function savePending(text: string, storage?: Storage): boolean {
   const store = resolveStorage(storage)
-  if (!store) return
+  if (!store) return false
   try {
     store.setItem(PENDING_MESSAGE_KEY, text)
+    return true
   } catch {
-    // Private-mode quota (or storage disabled) — the guest just re-types
-    // their message after signing in.
+    // Private-mode quota (or storage disabled) — the caller falls back to
+    // sending the message directly rather than relying on the reload path.
+    return false
   }
 }
 

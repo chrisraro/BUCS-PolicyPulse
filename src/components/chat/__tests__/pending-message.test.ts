@@ -55,13 +55,13 @@ class ThrowingStorage implements Storage {
 describe('pending-message store', () => {
   it('round-trips a saved message through takePending', () => {
     const storage = new FakeStorage()
-    savePending('What is the grading policy?', storage)
+    expect(savePending('What is the grading policy?', storage)).toBe(true)
     expect(takePending(storage)).toBe('What is the grading policy?')
   })
 
   it('clears the entry once taken', () => {
     const storage = new FakeStorage()
-    savePending('How do I file an appeal?', storage)
+    expect(savePending('How do I file an appeal?', storage)).toBe(true)
     takePending(storage)
     expect(takePending(storage)).toBeNull()
     expect(storage.getItem(PENDING_MESSAGE_KEY)).toBeNull()
@@ -72,9 +72,10 @@ describe('pending-message store', () => {
     expect(takePending(storage)).toBeNull()
   })
 
-  it('is a safe no-op when the storage throws (e.g. private browsing)', () => {
+  it('returns false (without throwing) when the storage throws (e.g. private browsing)', () => {
     const storage = new ThrowingStorage()
     expect(() => savePending('text', storage)).not.toThrow()
+    expect(savePending('text', storage)).toBe(false)
     expect(() => takePending(storage)).not.toThrow()
     expect(takePending(storage)).toBeNull()
   })
