@@ -10,6 +10,14 @@ import type { NextRequest } from 'next/server'
 // so it must not be redirected to /login here first.
 const PUBLIC_PATHS = ['/login', '/api/keepalive']
 
+// The chat home is publicly viewable (guest-first chat: composer is enabled,
+// sending is gated client-side behind sign-in — see `src/app/page.tsx`'s
+// guest branch and `ChatApp`'s guest mode). This is an *exact* match, not a
+// prefix — every other path (admin, api routes other than keepalive,
+// sessions, …) stays gated. `/api/chat` in particular stays auth-required
+// server-side (`requireUser` in the route handler) as defense in depth.
+const PUBLIC_EXACT_PATHS = ['/']
+
 export async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request })
 
@@ -41,7 +49,8 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser()
 
   const { pathname } = request.nextUrl
-  const isPublicPath = PUBLIC_PATHS.some((path) => pathname.startsWith(path))
+  const isPublicPath =
+    PUBLIC_PATHS.some((path) => pathname.startsWith(path)) || PUBLIC_EXACT_PATHS.includes(pathname)
 
   if (!user && !isPublicPath) {
     const redirectUrl = new URL('/login', request.url)

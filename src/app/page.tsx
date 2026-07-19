@@ -13,9 +13,44 @@ export default async function Home() {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // The proxy already gates unauthenticated requests before they reach this
-  // route — this is belt-and-braces for direct/edge-case hits.
-  if (!user) redirect('/login')
+  // Guest-first chat: the proxy allows unauthenticated requests to '/'
+  // through (see src/proxy.ts) so the chat home is publicly viewable. No
+  // profile/session queries here — guests have neither — and the documents
+  // count is skipped too (RLS blocks anon reads of it anyway, and we don't
+  // want to leak corpus state to a signed-out viewer); `hasIndexedDocs` is
+  // hardcoded `true` so the welcome screen's suggested prompts render
+  // normally. Sending is paused client-side behind sign-in — see
+  // `ChatApp`'s guest mode (src/components/chat/chat-app.tsx) — and
+  // `/api/chat` stays auth-required server-side as defense in depth.
+  if (!user) {
+    // Same aiConfigured check as the signed-in branch below (service-role
+    // client, reduced to a boolean before it crosses into client props) —
+    // guests get the same honest offline state, never a leaked key.
+    let aiConfigured = false
+    try {
+      const { data: aiSettings } = await createAdminClient()
+        .from('ai_settings')
+        .select('api_key, verified_at')
+        .eq('id', 1)
+        .single()
+      aiConfigured = !!aiSettings?.api_key
+    } catch {
+      aiConfigured = false
+    }
+
+    return (
+      <ToastProvider>
+        <Toaster />
+        <ChatApp
+          initialSessions={[]}
+          user={null}
+          hasIndexedDocs
+          isAdmin={false}
+          assistantOffline={!aiConfigured}
+        />
+      </ToastProvider>
+    )
+  }
 
   const { data: profile } = await supabase
     .from('profiles')

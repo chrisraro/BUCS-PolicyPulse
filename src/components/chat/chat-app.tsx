@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useChat } from '@ai-sdk/react'
 import { DefaultChatTransport } from 'ai'
+import { AuthGateDialog } from './auth-gate-dialog'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
@@ -12,13 +13,15 @@ import { Composer } from './composer'
 import { EscalationButton, EscalationDialog } from './escalation'
 import { lastUserQuestion } from './message-text'
 import { MessageList } from './message-list'
+import { savePending, takePending } from './pending-message'
 import { Sidebar } from './sidebar'
 import type { ChatAppUser, ChatMessageMetadata, ChatSessionSummary, ChatUIMessage } from './types'
 import { Welcome } from './welcome'
 
 export interface ChatAppProps {
   initialSessions: ChatSessionSummary[]
-  user: ChatAppUser
+  /** `null` for a signed-out guest — see the guest branch in `src/app/page.tsx`. */
+  user: ChatAppUser | null
   hasIndexedDocs: boolean
   isAdmin: boolean
   /** True when no AI provider key is configured yet — surfaced on the welcome screen. */
@@ -81,6 +84,7 @@ async function fetchSessionMessagesWithRetry(
  */
 export function ChatApp({ initialSessions, user, hasIndexedDocs, isAdmin, assistantOffline }: ChatAppProps) {
   const { showToast } = useToast()
+  const isGuest = user === null
 
   const [sessions, setSessions] = useState<ChatSessionSummary[]>(initialSessions)
   const [activeSessionId, setActiveSessionId] = useState<string | undefined>(undefined)
@@ -94,8 +98,14 @@ export function ChatApp({ initialSessions, user, hasIndexedDocs, isAdmin, assist
   const [escalationQuestion, setEscalationQuestion] = useState('')
   const [escalating, setEscalating] = useState(false)
 
+  // Guest-first chat: a signed-out visitor's typed message is held here
+  // (rather than sent) until they sign in through `AuthGateDialog`.
+  const [authGateOpen, setAuthGateOpen] = useState(false)
+  const [pendingGuestText, setPendingGuestText] = useState<string | null>(null)
+
   const pendingTitleRef = useRef<string | null>(null)
   const lastBackfilledKeyRef = useRef<string | null>(null)
+  const autoSentRef = useRef(false)
 
   const transport = useMemo(
     () =>
@@ -108,6 +118,25 @@ export function ChatApp({ initialSessions, user, hasIndexedDocs, isAdmin, assist
 
   const chat = useChat<ChatUIMessage>({ transport })
   const error = chat.error ? classifyChatError(chat.error) : null
+
+  // Guest-first chat's other half: a message held in sessionStorage across
+  // the sign-in reload (see `AuthGateDialog`'s `onAuthenticated` handler
+  // below) auto-sends once this component mounts signed-in. Guarded by a
+  // ref (not just the empty dep array) so React 19 Strict Mode's
+  // mount-unmount-remount in dev can't double-send it.
+  useEffect(() => {
+    if (isGuest || autoSentRef.current) return
+    autoSentRef.current = true
+    const pending = takePending()
+    if (!pending) return
+    if (!activeSessionId) {
+      pendingTitleRef.current = pending.slice(0, 60) || 'New chat'
+    }
+    void chat.sendMessage({ text: pending })
+    // Intentionally mount-only: `chat`/`activeSessionId` identity changes
+    // shouldn't re-trigger this, only the guard ref should.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   // Track the session id as soon as the server assigns one (it rides on the
   // 'start' stream part's metadata), keeping the sidebar list in sync: a
@@ -223,6 +252,14 @@ export function ChatApp({ initialSessions, user, hasIndexedDocs, isAdmin, assist
   }
 
   function handleSend(text: string) {
+    // Guest-first chat's core rule: sending is paused for a signed-out
+    // visitor. The message is held (not lost) and the auth gate opens;
+    // `handleAuthenticated` below is what actually pushes it through.
+    if (isGuest) {
+      setPendingGuestText(text)
+      setAuthGateOpen(true)
+      return
+    }
     if (!activeSessionId) {
       pendingTitleRef.current = text.slice(0, 60) || 'New chat'
     }
@@ -231,6 +268,22 @@ export function ChatApp({ initialSessions, user, hasIndexedDocs, isAdmin, assist
 
   function handleRetry() {
     void chat.regenerate()
+  }
+
+  /** Opens sign-in/sign-up. Escalation ("Ask a human") needs auth too, for guests. */
+  function openAuthGate() {
+    setAuthGateOpen(true)
+  }
+
+  /**
+   * Fires once `AuthGateDialog` confirms a session exists. If there was a
+   * held guest message, persist it to sessionStorage and reload — the
+   * server components re-render authenticated, and the mount effect above
+   * picks the message back up and sends it through the normal path.
+   */
+  function handleAuthenticated() {
+    if (pendingGuestText) savePending(pendingGuestText)
+    window.location.reload()
   }
 
   async function handleFeedback(messageId: string, rating: 'up' | 'down', comment?: string) {
@@ -246,6 +299,12 @@ export function ChatApp({ initialSessions, user, hasIndexedDocs, isAdmin, assist
   }
 
   function openEscalation(prefill: string) {
+    // Escalations need an authenticated identity — a guest gets the auth
+    // gate instead (see DESIGN.md's header "Ask a human" note).
+    if (isGuest) {
+      setAuthGateOpen(true)
+      return
+    }
     setEscalationQuestion(prefill)
     setEscalationOpen(true)
   }
@@ -269,7 +328,7 @@ export function ChatApp({ initialSessions, user, hasIndexedDocs, isAdmin, assist
     }
   }
 
-  const initial = (user.name || 'U').trim().charAt(0).toUpperCase() || 'U'
+  const initial = (user?.name || 'U').trim().charAt(0).toUpperCase() || 'U'
   const isBusy = chat.status === 'streaming' || chat.status === 'submitted'
 
   return (
@@ -284,6 +343,7 @@ export function ChatApp({ initialSessions, user, hasIndexedDocs, isAdmin, assist
           onRequestDelete={requestDeleteSession}
           user={user}
           isAdmin={isAdmin}
+          onSignIn={openAuthGate}
         />
       </div>
 
@@ -305,6 +365,7 @@ export function ChatApp({ initialSessions, user, hasIndexedDocs, isAdmin, assist
               onRequestDelete={requestDeleteSession}
               user={user}
               isAdmin={isAdmin}
+              onSignIn={openAuthGate}
               onNavigate={closeDrawer}
             />
           </DrawerPanel>
@@ -336,12 +397,20 @@ export function ChatApp({ initialSessions, user, hasIndexedDocs, isAdmin, assist
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="mx-auto flex min-h-0 w-full max-w-[46rem] flex-1 flex-col overflow-hidden px-4 sm:px-6">
             {chat.messages.length === 0 ? (
-              <Welcome
-                hasIndexedDocs={hasIndexedDocs}
-                isAdmin={isAdmin}
-                assistantOffline={assistantOffline}
-                onPrompt={handleSend}
-              />
+              isGuest && pendingGuestText ? (
+                <GuestHeldMessage
+                  text={pendingGuestText}
+                  onSignIn={() => setAuthGateOpen(true)}
+                  onDiscard={() => setPendingGuestText(null)}
+                />
+              ) : (
+                <Welcome
+                  hasIndexedDocs={hasIndexedDocs}
+                  isAdmin={isAdmin}
+                  assistantOffline={assistantOffline}
+                  onPrompt={handleSend}
+                />
+              )
             ) : (
               <MessageList
                 messages={chat.messages}
@@ -383,6 +452,49 @@ export function ChatApp({ initialSessions, user, hasIndexedDocs, isAdmin, assist
         onSubmit={submitEscalation}
         submitting={escalating}
       />
+
+      <AuthGateDialog
+        open={authGateOpen}
+        onClose={() => setAuthGateOpen(false)}
+        onAuthenticated={handleAuthenticated}
+      />
+    </div>
+  )
+}
+
+/**
+ * Guest-first chat's held state: a signed-out visitor's typed message stays
+ * visible (never silently dropped) while the auth gate is open or closed
+ * again without signing in. Styled like the user message bubble
+ * (DESIGN.md's Message bubble spec) so it reads as "your message, waiting".
+ */
+function GuestHeldMessage({
+  text,
+  onSignIn,
+  onDiscard,
+}: {
+  text: string
+  onSignIn: () => void
+  onDiscard: () => void
+}) {
+  return (
+    <div className="flex flex-1 flex-col items-center justify-center gap-4 py-16 text-center">
+      <div className="flex w-full justify-end">
+        <div className="max-w-[85%] rounded-card bg-surface-2 px-4 py-2.5 text-left text-sm text-ink">
+          <p className="whitespace-pre-wrap">{text}</p>
+        </div>
+      </div>
+      <p className="max-w-sm text-sm text-muted">
+        Sign in with your BU email to send this message.
+      </p>
+      <div className="flex flex-wrap justify-center gap-3">
+        <Button variant="primary" onClick={onSignIn}>
+          Sign in to send
+        </Button>
+        <Button variant="ghost" onClick={onDiscard}>
+          Discard
+        </Button>
+      </div>
     </div>
   )
 }

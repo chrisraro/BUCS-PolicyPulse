@@ -15,10 +15,13 @@ export interface SidebarProps {
   onSelectSession: (id: string) => void
   onNewChat: () => void
   onRequestDelete: (id: string) => void
-  user: ChatAppUser
+  /** `null` for a signed-out guest — renders the "sign in to see your chats" variant. */
+  user: ChatAppUser | null
   isAdmin: boolean
   /** Closes the mobile drawer after a navigating action. No-op on desktop. */
   onNavigate?: () => void
+  /** Opens the auth gate dialog. Only used (and only needed) in guest mode. */
+  onSignIn?: () => void
 }
 
 function relativeTime(iso: string): string {
@@ -43,9 +46,9 @@ export function Sidebar({
   user,
   isAdmin,
   onNavigate,
+  onSignIn,
 }: SidebarProps) {
   const [signingOut, setSigningOut] = useState(false)
-  const initial = (user.name || 'U').trim().charAt(0).toUpperCase() || 'U'
 
   async function handleSignOut() {
     setSigningOut(true)
@@ -57,6 +60,42 @@ export function Sidebar({
       setSigningOut(false)
     }
   }
+
+  // Guest-first chat: no sessions/account to show for a signed-out visitor —
+  // "New chat" is disabled (there's nothing to save it under yet) and the
+  // session list is replaced with a plain sign-in prompt.
+  if (user === null) {
+    return (
+      <div className="flex h-full flex-col">
+        <div className="p-4">
+          <Button variant="primary" className="w-full" disabled title="Sign in to start a new chat">
+            New chat
+          </Button>
+        </div>
+
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+          <p className="text-sm text-muted">Sign in to see your chats.</p>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              onSignIn?.()
+              onNavigate?.()
+            }}
+          >
+            Sign in
+          </Button>
+        </div>
+
+        <div className="border-t border-border p-3">
+          <div className="flex items-center justify-end px-1 py-1">
+            <ThemeToggle />
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  const initial = (user.name || 'U').trim().charAt(0).toUpperCase() || 'U'
 
   return (
     <div className="flex h-full flex-col">
