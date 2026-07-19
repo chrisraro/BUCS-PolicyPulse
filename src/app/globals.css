@@ -1,26 +1,244 @@
 @import "tailwindcss";
 
+/* Tailwind v4: `.dark` on <html> (or any ancestor) drives the dark variant. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------------- *
+ * Design tokens — DESIGN.md, verbatim OKLCH values.
+ * ---------------------------------------------------------------------- */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Color */
+  --bg: oklch(1 0 0);
+  --surface: oklch(0.97 0.003 255);
+  --surface-2: oklch(0.94 0.005 255);
+  --ink: oklch(0.21 0.02 258);
+  --muted: oklch(0.5 0.015 258);
+  --primary: oklch(0.42 0.09 258);
+  --primary-ink: oklch(1 0 0);
+  --accent: oklch(0.55 0.11 80);
+  --accent-subtle: oklch(0.95 0.03 85);
+  --danger: oklch(0.5 0.15 25);
+  --success: oklch(0.52 0.1 150);
+  --border: oklch(0.89 0.004 255);
+
+  /*
+   * Subtle-background counterparts for --primary/--success/--danger, following
+   * the same lightness/chroma relationship DESIGN.md defines for
+   * --accent -> --accent-subtle (L ~0.95, C ~0.03, same hue in light mode).
+   * DESIGN.md only specifies the accent pair explicitly; these are derived to
+   * satisfy "status pills use subtle-background + strong-text pairs" for the
+   * other semantic colors (StatusPill: indexed/processing/failed/open/resolved).
+   */
+  --primary-subtle: oklch(0.95 0.02 258);
+  --success-subtle: oklch(0.95 0.03 150);
+  --danger-subtle: oklch(0.95 0.03 25);
+
+  /* Overlay used behind dialogs/drawers */
+  --overlay: oklch(0 0 0 / 0.4);
+
+  /* Elevation — shadows only on floating layers, never with a border too */
+  --shadow-float-raw: 0 4px 8px oklch(0 0 0 / 0.08);
+
+  /* Semantic z-scale */
+  --z-dropdown: 20;
+  --z-sticky: 30;
+  --z-drawer: 40;
+  --z-overlay: 50;
+  --z-dialog: 60;
+  --z-toast: 70;
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 250ms;
 }
 
+.dark {
+  --bg: oklch(0.145 0 0);
+  --surface: oklch(0.185 0.005 255);
+  --surface-2: oklch(0.23 0.006 255);
+  --ink: oklch(0.95 0.005 255);
+  --muted: oklch(0.72 0.01 255);
+  --primary: oklch(0.68 0.1 258);
+  --primary-ink: oklch(0.15 0.02 258);
+  --accent: oklch(0.78 0.11 85);
+  --accent-subtle: oklch(0.26 0.04 85);
+  --danger: oklch(0.7 0.14 25);
+  --success: oklch(0.72 0.11 150);
+  --border: oklch(0.3 0.005 255);
+
+  --primary-subtle: oklch(0.28 0.04 258);
+  --success-subtle: oklch(0.26 0.04 150);
+  --danger-subtle: oklch(0.26 0.04 25);
+
+  --overlay: oklch(0 0 0 / 0.4);
+  --shadow-float-raw: 0 4px 8px oklch(0 0 0 / 0.24);
+}
+
+/* ---------------------------------------------------------------------- *
+ * Tailwind theme mapping — makes bg-bg, text-ink, border-border,
+ * font-sans, font-serif, rounded-input, rounded-card, shadow-float, etc.
+ * available as utilities.
+ * ---------------------------------------------------------------------- */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-ink: var(--primary-ink);
+  --color-accent: var(--accent);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+  --color-border: var(--border);
+  --color-primary-subtle: var(--primary-subtle);
+  --color-success-subtle: var(--success-subtle);
+  --color-danger-subtle: var(--danger-subtle);
+
+  /* Fonts — see layout.tsx for next/font source variables. */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-source-serif), Georgia, "Times New Roman", serif;
+
+  /* Fixed rem type scale, ratio ~1.2 (DESIGN.md Typography) */
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.5;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.55;
+  --text-base: 1rem;
+  --text-base--line-height: 1.6;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.5;
+  --text-xl: 1.375rem;
+  --text-xl--line-height: 1.4;
+  --text-2xl: 1.75rem;
+  --text-2xl--line-height: 1.3;
+  --text-3xl: 2.25rem;
+  --text-3xl--line-height: 1.2;
+
+  /* Radius (component-level cap; see DESIGN.md Spacing/Radius/Elevation) */
+  --radius-input: 8px;
+  --radius-card: 12px;
+
+  --shadow-float: var(--shadow-float-raw);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* ---------------------------------------------------------------------- *
+ * Base
+ * ---------------------------------------------------------------------- */
+html {
+  height: 100%;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  text-wrap: balance;
+}
+
+/* Letter-spacing applies to the serif display face only, never body/UI text. */
+.font-serif {
+  letter-spacing: -0.02em;
+}
+
+/* Markdown answer body (chat) — code blocks / tables per DESIGN.md */
+.markdown-body pre,
+.markdown-body code {
+  background: var(--surface-2);
+  border-radius: var(--radius-input);
+}
+
+.markdown-body table {
+  display: block;
+  overflow-x: auto;
+}
+
+/* ---------------------------------------------------------------------- *
+ * Dialog / bottom sheet — native <dialog>, fade + 8px rise (~200ms).
+ * Uses @starting-style + allow-discrete so both the open AND close
+ * transitions are pure CSS (no JS-orchestrated exit animation needed).
+ * ---------------------------------------------------------------------- */
+dialog.pp-dialog {
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity var(--duration-base) var(--ease-out),
+    transform var(--duration-base) var(--ease-out),
+    overlay var(--duration-base) var(--ease-out) allow-discrete,
+    display var(--duration-base) allow-discrete;
+}
+
+dialog.pp-dialog[open] {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@starting-style {
+  dialog.pp-dialog[open] {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+dialog.pp-dialog::backdrop {
+  background: var(--overlay);
+  opacity: 0;
+  transition:
+    opacity var(--duration-base) var(--ease-out) allow-discrete;
+}
+
+dialog.pp-dialog[open]::backdrop {
+  opacity: 1;
+}
+
+@starting-style {
+  dialog.pp-dialog[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+/* Bottom-sheet variant: rise becomes a slide up from the bottom edge. */
+@media (max-width: 639px) {
+  dialog.pp-dialog.pp-dialog-sheet {
+    transform: translateY(100%);
+  }
+
+  dialog.pp-dialog.pp-dialog-sheet[open] {
+    transform: translateY(0);
+  }
+
+  @starting-style {
+    dialog.pp-dialog.pp-dialog-sheet[open] {
+      transform: translateY(100%);
+    }
+  }
+}
+
+/* ---------------------------------------------------------------------- *
+ * Motion: reduced-motion kills all transitions/animations globally.
+ * ---------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
