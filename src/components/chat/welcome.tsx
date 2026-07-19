@@ -12,13 +12,15 @@ export interface WelcomeProps {
   onPrompt: (text: string) => void
 }
 
-// Spec (`policypulse-uiux-design.md` §2) names four topics — phrased here as the
-// natural questions a student/faculty member would actually ask.
+// Prompts chosen against the ACTUAL indexed handbook (scripts/pick-prompts.mjs
+// runs the real semantic retrieval): each surfaces a chunk that DIRECTLY
+// answers it. "Leave of absence" / "academic appeal" were dropped — no
+// substantive coverage in the document, they returned "not found".
 const SUGGESTED_PROMPTS = [
   'What is the grading policy?',
-  'How do I apply for a leave of absence?',
-  'What are the attendance requirements?',
-  'How do I file an academic appeal?',
+  'How do I drop a subject?',
+  'What are the rules on academic probation and dismissal?',
+  'How do I shift to another course?',
 ]
 
 export function Welcome({ hasIndexedDocs, isAdmin, assistantOffline, onPrompt }: WelcomeProps) {
