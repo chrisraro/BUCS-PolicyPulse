@@ -10,6 +10,7 @@ import type { Citation } from '@/lib/rag/citations'
 import { classifyChatError } from './chat-error'
 import { Composer } from './composer'
 import { EscalationButton, EscalationDialog } from './escalation'
+import { lastUserQuestion } from './message-text'
 import { MessageList } from './message-list'
 import { Sidebar } from './sidebar'
 import type { ChatAppUser, ChatMessageMetadata, ChatSessionSummary, ChatUIMessage } from './types'
@@ -20,6 +21,8 @@ export interface ChatAppProps {
   user: ChatAppUser
   hasIndexedDocs: boolean
   isAdmin: boolean
+  /** True when no AI provider key is configured yet — surfaced on the welcome screen. */
+  assistantOffline: boolean
 }
 
 interface SessionMessageRow {
@@ -58,26 +61,17 @@ async function fetchSessionMessagesWithRetry(
   return null
 }
 
-function lastUserQuestion(messages: ChatUIMessage[]): string {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const message = messages[i]
-    if (message.role === 'user') {
-      return message.parts
-        .filter((part): part is Extract<typeof part, { type: 'text' }> => part.type === 'text')
-        .map((part) => part.text)
-        .join('')
-    }
-  }
-  return ''
-}
-
 /**
  * Client orchestrator: `useChat` wiring, session switching/history hydration,
  * new chat / delete, and the shared feedback/escalation dialog state.
  *
  * `useChat` verified against the installed `@ai-sdk/react`/`ai` packages:
- * - `sendMessage({ text })`, `regenerate()`, `stop()`, `setMessages()`, `status`
- *   (`'submitted' | 'streaming' | 'ready' | 'error'`), `messages`, `error`.
+ * - `sendMessage({ text })`, `regenerate()`, `stop()`, `setMessages()`, `clearError()`,
+ *   `status` (`'submitted' | 'streaming' | 'ready' | 'error'`), `messages`, `error`.
+ *   `clearError` is called before every `setMessages` swap (new chat / session
+ *   select) so a failed request's error banner never leaks into a different
+ *   conversation — `useChat`'s `error` state is sticky across `setMessages`
+ *   calls and is only otherwise cleared by the next `sendMessage`/`regenerate`.
  * - `sessionId` rides in the request body via `DefaultChatTransport`'s
  *   `body` option, closing over `activeSessionId` state. `useChat` itself
  *   re-reads whatever `transport` was passed on the *last* render through an
@@ -85,7 +79,7 @@ function lastUserQuestion(messages: ChatUIMessage[]): string {
  *   actual send, so a plain per-render transport object — no manual ref
  *   plumbing needed here — always carries the current session id.
  */
-export function ChatApp({ initialSessions, user, hasIndexedDocs, isAdmin }: ChatAppProps) {
+export function ChatApp({ initialSessions, user, hasIndexedDocs, isAdmin, assistantOffline }: ChatAppProps) {
   const { showToast } = useToast()
 
   const [sessions, setSessions] = useState<ChatSessionSummary[]>(initialSessions)
@@ -175,6 +169,7 @@ export function ChatApp({ initialSessions, user, hasIndexedDocs, isAdmin }: Chat
   function handleNewChat() {
     if (chat.status === 'streaming' || chat.status === 'submitted') chat.stop()
     setActiveSessionId(undefined)
+    chat.clearError()
     chat.setMessages([])
     closeDrawer()
   }
@@ -194,6 +189,7 @@ export function ChatApp({ initialSessions, user, hasIndexedDocs, isAdmin }: Chat
       }
       const data = (await res.json()) as { messages: SessionMessageRow[] }
       setActiveSessionId(id)
+      chat.clearError()
       chat.setMessages(dbRowsToMessages(data.messages))
     } finally {
       setLoadingSessionId(null)
@@ -238,11 +234,15 @@ export function ChatApp({ initialSessions, user, hasIndexedDocs, isAdmin }: Chat
   }
 
   async function handleFeedback(messageId: string, rating: 'up' | 'down', comment?: string) {
-    await fetch('/api/feedback', {
+    const res = await fetch('/api/feedback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ messageId, rating, comment }),
     })
+    if (!res.ok) {
+      showToast({ title: "Couldn't save your feedback — try again." })
+      throw new Error('feedback submission failed')
+    }
   }
 
   function openEscalation(prefill: string) {
@@ -336,7 +336,12 @@ export function ChatApp({ initialSessions, user, hasIndexedDocs, isAdmin }: Chat
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="mx-auto flex min-h-0 w-full max-w-[46rem] flex-1 flex-col overflow-hidden px-4 sm:px-6">
             {chat.messages.length === 0 ? (
-              <Welcome hasIndexedDocs={hasIndexedDocs} isAdmin={isAdmin} onPrompt={handleSend} />
+              <Welcome
+                hasIndexedDocs={hasIndexedDocs}
+                isAdmin={isAdmin}
+                assistantOffline={assistantOffline}
+                onPrompt={handleSend}
+              />
             ) : (
               <MessageList
                 messages={chat.messages}

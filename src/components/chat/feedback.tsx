@@ -32,6 +32,10 @@ export function Feedback({ messageId, onSubmit }: FeedbackProps) {
     try {
       await onSubmit('up')
       setSent('up')
+    } catch {
+      // Failure toast is surfaced by the caller (ChatApp's handleFeedback);
+      // here we just make sure the "Thanks for the feedback" success state
+      // never shows — the thumbs stay active so the user can retry.
     } finally {
       setSubmitting(false)
     }
@@ -44,6 +48,9 @@ export function Feedback({ messageId, onSubmit }: FeedbackProps) {
       await onSubmit('down', comment.trim() || undefined)
       setSent('down')
       setDialogOpen(false)
+    } catch {
+      // Keep the dialog open and the thumbs active on failure — no success
+      // state — so the user can see the toast (from ChatApp) and retry.
     } finally {
       setSubmitting(false)
     }

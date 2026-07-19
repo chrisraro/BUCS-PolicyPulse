@@ -6,6 +6,8 @@ import { cn } from '@/lib/cn'
 export interface WelcomeProps {
   hasIndexedDocs: boolean
   isAdmin: boolean
+  /** True when no AI provider key is configured — takes priority over the no-indexed-docs state. */
+  assistantOffline: boolean
   onPrompt: (text: string) => void
 }
 
@@ -18,7 +20,30 @@ const SUGGESTED_PROMPTS = [
   'How do I file an academic appeal?',
 ]
 
-export function Welcome({ hasIndexedDocs, isAdmin, onPrompt }: WelcomeProps) {
+export function Welcome({ hasIndexedDocs, isAdmin, assistantOffline, onPrompt }: WelcomeProps) {
+  // The assistant being unconfigured is the more fundamental blocker — if
+  // both conditions hold (no key AND no indexed docs), this state wins.
+  if (assistantOffline) {
+    return (
+      <div className="flex flex-1 flex-col items-center justify-center gap-3 py-16 text-center">
+        <h1 className="text-balance font-serif text-2xl font-semibold text-ink sm:text-3xl">
+          Ask about any BUCS policy
+        </h1>
+        <p className="max-w-sm text-sm text-muted">The assistant is offline — no AI key is configured.</p>
+        {isAdmin ? (
+          <div className="mt-2 flex flex-wrap justify-center gap-3">
+            <Link
+              href="/admin/settings"
+              className="inline-flex h-11 min-h-11 items-center rounded-input bg-primary px-4 text-sm font-medium text-primary-ink hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
+            >
+              Add your API key in AI Settings
+            </Link>
+          </div>
+        ) : null}
+      </div>
+    )
+  }
+
   if (!hasIndexedDocs) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 py-16 text-center">

@@ -3,6 +3,7 @@ import { ChatApp } from '@/components/chat/chat-app'
 import type { ChatSessionSummary } from '@/components/chat/types'
 import { ToastProvider, Toaster } from '@/components/ui/toast'
 import type { UserRole } from '@/lib/auth'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { createServerSupabase } from '@/lib/supabase/server'
 
 export default async function Home() {
@@ -38,6 +39,18 @@ export default async function Home() {
     .select('id', { count: 'exact', head: true })
     .eq('status', 'indexed')
 
+  // `ai_settings` is admin-only under RLS, but every role needs to know
+  // whether the assistant is configured at all (welcome screen empty
+  // state) — read it with the service-role client and reduce it to a
+  // boolean immediately. Only that boolean crosses into client props;
+  // the key itself never leaves this server component.
+  const { data: aiSettings } = await createAdminClient()
+    .from('ai_settings')
+    .select('api_key, verified_at')
+    .eq('id', 1)
+    .single()
+  const aiConfigured = !!aiSettings?.api_key
+
   const role = profile.role as UserRole
   const name = (profile.full_name as string) || (profile.email as string) || user.email || 'Account'
 
@@ -49,6 +62,7 @@ export default async function Home() {
         user={{ name, role }}
         hasIndexedDocs={(count ?? 0) > 0}
         isAdmin={role === 'admin'}
+        assistantOffline={!aiConfigured}
       />
     </ToastProvider>
   )

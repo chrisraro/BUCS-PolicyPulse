@@ -91,7 +91,7 @@ export function Sidebar({
                     }}
                     aria-current={isActive ? 'page' : undefined}
                     className={cn(
-                      'flex w-full flex-col items-start gap-0.5 rounded-input px-3 py-2.5 pr-10 text-left text-sm',
+                      'flex w-full flex-col items-start gap-0.5 rounded-input px-3 py-2.5 pr-12 text-left text-sm',
                       isActive ? 'bg-primary-subtle text-primary' : 'text-ink hover:bg-surface-2',
                       'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface',
                       'transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)]',
@@ -114,7 +114,12 @@ export function Sidebar({
                       onRequestDelete(session.id)
                     }}
                     className={cn(
-                      'absolute top-1/2 right-1 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-input text-muted opacity-0',
+                      // Hidden by default on hover-capable (mouse) pointers, revealed on
+                      // hover or keyboard focus-within — but on coarse/touch pointers
+                      // (no hover concept) it stays persistently visible at reduced
+                      // opacity, since group-hover would never trigger there.
+                      'absolute top-1/2 right-1 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-input text-muted opacity-0',
+                      'pointer-coarse:opacity-60',
                       'group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-surface-2 hover:text-danger',
                       'focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
                       'transition-opacity duration-[var(--duration-fast)] ease-[var(--ease-out)]',

@@ -16,7 +16,7 @@ export function EscalationButton({ onClick, className }: EscalationButtonProps) 
       type="button"
       onClick={onClick}
       className={cn(
-        'inline-flex h-9 min-h-9 items-center gap-1.5 rounded-input px-3 text-sm font-medium text-ink',
+        'inline-flex h-11 min-h-11 items-center gap-1.5 rounded-input px-3 text-sm font-medium text-ink',
         'hover:bg-surface-2 active:bg-surface-2',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface',
         'transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)]',

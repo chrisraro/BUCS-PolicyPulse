@@ -10,6 +10,7 @@ import { Citations } from './citations'
 import { Feedback } from './feedback'
 import { DegradedNotice } from './degraded-notice'
 import { EscalationCard } from './escalation'
+import { lastUserQuestion, textOfParts } from './message-text'
 import type { ChatMessageMetadata, ChatUIMessage, ClassifiedChatError } from './types'
 
 export interface MessageListProps {
@@ -20,21 +21,6 @@ export interface MessageListProps {
   onRetry: () => void
   onFeedback: (messageId: string, rating: 'up' | 'down', comment?: string) => Promise<void>
   onEscalate: (question: string) => void
-}
-
-function textOf(message: ChatUIMessage): string {
-  return message.parts
-    .filter((part): part is Extract<typeof part, { type: 'text' }> => part.type === 'text')
-    .map((part) => part.text)
-    .join('')
-}
-
-function lastUserQuestionBefore(messages: ChatUIMessage[], assistantId: string): string {
-  const index = messages.findIndex((m) => m.id === assistantId)
-  for (let i = index - 1; i >= 0; i--) {
-    if (messages[i].role === 'user') return textOf(messages[i])
-  }
-  return ''
 }
 
 // Markdown answer styling per DESIGN.md Typography: h2/h3 map to
@@ -117,10 +103,10 @@ export function MessageList({ messages, status, error, isAdmin, onRetry, onFeedb
     <div className="relative min-h-0 flex-1">
       <div ref={scrollRef} onScroll={handleScroll} className="absolute inset-0 overflow-y-auto py-6">
         <ul className="flex flex-col gap-6">
-          {messages.map((message) => {
+          {messages.map((message, index) => {
             const isLast = message.id === lastMessage?.id
             const isStreamingThis = isLast && message.role === 'assistant' && status === 'streaming'
-            const text = textOf(message)
+            const text = textOfParts(message)
             const metadata = message.metadata as ChatMessageMetadata | undefined
 
             if (message.role === 'user') {
@@ -171,7 +157,7 @@ export function MessageList({ messages, status, error, isAdmin, onRetry, onFeedb
                   ) : null}
 
                   {showEscalationCard ? (
-                    <EscalationCard onAskHuman={() => onEscalate(lastUserQuestionBefore(messages, message.id))} />
+                    <EscalationCard onAskHuman={() => onEscalate(lastUserQuestion(messages, index))} />
                   ) : null}
                 </div>
               </li>

@@ -35,7 +35,7 @@ export function Citations({ citations }: CitationsProps) {
               aria-expanded={isOpen}
               onClick={() => setOpenRef(isOpen ? null : citation.ref)}
               className={cn(
-                'inline-flex min-h-9 items-center gap-1.5 rounded-full border bg-accent-subtle px-3 py-1.5 text-xs text-ink',
+                'inline-flex min-h-11 items-center gap-1.5 rounded-full border bg-accent-subtle px-3 py-1.5 text-xs text-ink',
                 isOpen ? 'border-accent' : 'border-transparent hover:border-border',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg',
                 'transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)]',
