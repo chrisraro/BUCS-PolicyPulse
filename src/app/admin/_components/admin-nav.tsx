@@ -1,5 +1,6 @@
 'use client'
 
+import * as React from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/cn'
@@ -19,6 +20,7 @@ function isActivePath(pathname: string, href: string): boolean {
 
 const linkBase =
   'inline-flex min-h-11 items-center rounded-input font-medium ' +
+  'transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)] ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface'
 
 /**
@@ -28,6 +30,15 @@ const linkBase =
  */
 export function AdminNav({ email }: { email: string }) {
   const pathname = usePathname()
+  const mobileNavRef = React.useRef<HTMLElement>(null)
+
+  // Bring the current section into view in the horizontal tab bar on mount —
+  // on a narrow phone the active tab can otherwise sit off-screen with no
+  // indication a wider set of tabs exists.
+  React.useEffect(() => {
+    const activeLink = mobileNavRef.current?.querySelector('[aria-current="page"]')
+    activeLink?.scrollIntoView({ inline: 'center', block: 'nearest' })
+  }, [])
 
   return (
     <>
@@ -38,7 +49,11 @@ export function AdminNav({ email }: { email: string }) {
           </Link>
           <ThemeToggle />
         </div>
-        <nav aria-label="Admin sections" className="flex gap-1 overflow-x-auto px-2 pb-2">
+        <nav
+          ref={mobileNavRef}
+          aria-label="Admin sections"
+          className="flex gap-1 overflow-x-auto px-2 pb-2"
+        >
           {NAV_ITEMS.map((item) => {
             const active = isActivePath(pathname, item.href)
             return (
@@ -48,10 +63,10 @@ export function AdminNav({ email }: { email: string }) {
                 aria-current={active ? 'page' : undefined}
                 className={cn(
                   linkBase,
-                  'shrink-0 px-3 text-sm whitespace-nowrap',
+                  'shrink-0 border-b-2 px-3 text-sm whitespace-nowrap',
                   active
-                    ? 'bg-primary-subtle text-primary'
-                    : 'text-muted hover:bg-surface-2 hover:text-ink',
+                    ? 'border-primary bg-primary-subtle text-primary'
+                    : 'border-transparent text-muted hover:bg-surface-2 hover:text-ink',
                 )}
               >
                 {item.label}

@@ -6,6 +6,8 @@ import type { Citation } from '@/lib/rag/citations'
 
 export interface CitationsProps {
   citations: Citation[]
+  /** Applied to the root — e.g. `.pp-enter` for a freshly-completed new answer. */
+  className?: string
 }
 
 /**
@@ -16,7 +18,7 @@ export interface CitationsProps {
  * transition duration to ~0 globally, so this is instant under
  * `prefers-reduced-motion: reduce` with no extra branching here.
  */
-export function Citations({ citations }: CitationsProps) {
+export function Citations({ citations, className }: CitationsProps) {
   const [openRef, setOpenRef] = useState<number | null>(null)
 
   if (citations.length === 0) return null
@@ -24,7 +26,7 @@ export function Citations({ citations }: CitationsProps) {
   const active = citations.find((c) => c.ref === openRef) ?? null
 
   return (
-    <div className="mt-3">
+    <div className={cn('mt-3', className)}>
       <div className="flex flex-wrap gap-2">
         {citations.map((citation) => {
           const isOpen = citation.ref === openRef
@@ -35,14 +37,14 @@ export function Citations({ citations }: CitationsProps) {
               aria-expanded={isOpen}
               onClick={() => setOpenRef(isOpen ? null : citation.ref)}
               className={cn(
-                'inline-flex min-h-11 items-center gap-1.5 rounded-full border bg-accent-subtle px-3 py-1.5 text-xs text-ink',
+                'pp-pressable inline-flex min-h-11 items-center gap-1.5 rounded-full border bg-accent-subtle px-3 py-1.5 text-xs text-ink',
                 isOpen ? 'border-accent' : 'border-transparent hover:border-border',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg',
                 'transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)]',
               )}
             >
               <span className="font-semibold text-accent">{citation.ref}</span>
-              <span className="max-w-[16rem] truncate">{citation.documentTitle}</span>
+              <span className="max-w-[min(16rem,55vw)] truncate">{citation.documentTitle}</span>
             </button>
           )
         })}
@@ -50,7 +52,7 @@ export function Citations({ citations }: CitationsProps) {
 
       <div
         className={cn(
-          'grid transition-[grid-template-rows] duration-200 ease-[var(--ease-out)]',
+          'grid transition-[grid-template-rows] duration-[var(--duration-base)] ease-[var(--ease-out)]',
           active ? 'mt-2 grid-rows-[1fr]' : 'grid-rows-[0fr]',
         )}
       >

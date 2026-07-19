@@ -48,18 +48,18 @@ export default async function EscalationsPage() {
             <li key={row.id} className="rounded-card border border-border bg-surface p-4">
               <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-ink">{row.question}</p>
+                  <p className="text-sm font-medium break-words text-ink">{row.question}</p>
                   <p className="mt-1 text-xs text-muted">
                     {row.profiles?.email ?? 'Unknown user'} · {formatDateTime(row.created_at)}
                   </p>
                 </div>
-                <StatusPill kind={row.status} />
+                <StatusPill key={row.status} kind={row.status} className="pp-enter shrink-0" />
               </div>
 
               {row.status === 'resolved' && row.resolution ? (
                 <div className="mt-3 rounded-input bg-surface-2 p-3 text-sm text-ink">
                   <p className="text-xs font-medium text-muted">Resolution</p>
-                  <p className="mt-1 whitespace-pre-wrap">{row.resolution}</p>
+                  <p className="mt-1 break-words whitespace-pre-wrap">{row.resolution}</p>
                 </div>
               ) : null}
 

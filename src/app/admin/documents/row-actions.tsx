@@ -26,7 +26,13 @@ export function ReindexButton({ documentId }: { documentId: string }) {
   return (
     <form action={formAction}>
       <input type="hidden" name="documentId" value={documentId} />
-      <Button type="submit" variant="secondary" size="touch" loading={pending}>
+      <Button
+        type="submit"
+        variant="secondary"
+        size="touch"
+        loading={pending}
+        className="pp-pressable"
+      >
         Re-index
       </Button>
     </form>
@@ -66,7 +72,12 @@ export function DeleteDocumentButton({
 
   return (
     <>
-      <Button variant="danger" size="touch" onClick={() => setOpen(true)}>
+      <Button
+        variant="danger"
+        size="touch"
+        onClick={() => setOpen(true)}
+        className="pp-pressable"
+      >
         Delete
       </Button>
       <Dialog open={open} onClose={() => setOpen(false)} title="Delete document">
@@ -76,10 +87,22 @@ export function DeleteDocumentButton({
         </p>
         <form action={formAction} className="mt-4 flex justify-end gap-2">
           <input type="hidden" name="documentId" value={documentId} />
-          <Button type="button" variant="secondary" size="touch" onClick={() => setOpen(false)}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="touch"
+            onClick={() => setOpen(false)}
+            className="pp-pressable"
+          >
             Cancel
           </Button>
-          <Button type="submit" variant="danger" size="touch" loading={pending}>
+          <Button
+            type="submit"
+            variant="danger"
+            size="touch"
+            loading={pending}
+            className="pp-pressable"
+          >
             Delete document
           </Button>
         </form>

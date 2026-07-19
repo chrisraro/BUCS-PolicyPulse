@@ -11,6 +11,7 @@ import { Feedback } from './feedback'
 import { DegradedNotice } from './degraded-notice'
 import { EscalationCard } from './escalation'
 import { lastUserQuestion, textOfParts } from './message-text'
+import { computeNewMessageIds } from './message-novelty'
 import type { ChatMessageMetadata, ChatUIMessage, ClassifiedChatError } from './types'
 
 export interface MessageListProps {
@@ -70,6 +71,23 @@ export function MessageList({ messages, status, error, isAdmin, onRetry, onFeedb
   const isAtBottomRef = useRef(true)
   const [isAtBottom, setIsAtBottom] = useState(true)
 
+  // "New vs hydrated" gating for the `.pp-enter` entrance animation (see
+  // `computeNewMessageIds`). This is React's documented "adjusting state
+  // when a prop changes" pattern (calling `setState` directly in the render
+  // body, guarded by a reference-equality check) rather than an effect: the
+  // very first paint of a newly-appended message already carries the class,
+  // since React re-renders synchronously (no extra commit/paint in between)
+  // before anything reaches the screen — an effect-added class would instead
+  // flash the bubble in at full opacity for one frame before restarting the
+  // animation. See https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
+  const [prevMessages, setPrevMessages] = useState<ChatUIMessage[] | null>(null)
+  const [newMessageIds, setNewMessageIds] = useState<Set<string>>(new Set())
+  if (messages !== prevMessages) {
+    setNewMessageIds(computeNewMessageIds(prevMessages, messages, newMessageIds))
+    setPrevMessages(messages)
+  }
+  const isNewMessage = useCallback((id: string) => newMessageIds.has(id), [newMessageIds])
+
   const handleScroll = useCallback(() => {
     const el = scrollRef.current
     if (!el) return
@@ -109,9 +127,11 @@ export function MessageList({ messages, status, error, isAdmin, onRetry, onFeedb
             const text = textOfParts(message)
             const metadata = message.metadata as ChatMessageMetadata | undefined
 
+            const isNew = isNewMessage(message.id)
+
             if (message.role === 'user') {
               return (
-                <li key={message.id} className="flex justify-end">
+                <li key={message.id} className={cn('flex justify-end', isNew && 'pp-enter')}>
                   <div className="max-w-[85%] rounded-card bg-surface-2 px-4 py-2.5 text-sm text-ink">
                     <p className="whitespace-pre-wrap">{text}</p>
                   </div>
@@ -124,9 +144,10 @@ export function MessageList({ messages, status, error, isAdmin, onRetry, onFeedb
             const citations = citedInText(metadata?.citations ?? [], text)
             const isComplete = !isLast || status === 'ready' || status === 'error'
             const showEscalationCard = isComplete && text.length > 0 && citations.length === 0
+            const showThinking = isLast && text.length === 0 && (status === 'submitted' || status === 'streaming')
 
             return (
-              <li key={message.id} className="flex gap-3">
+              <li key={message.id} className={cn('flex gap-3', isNew && 'pp-enter')}>
                 <span className="mt-1 h-5 w-5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
                 <div className="min-w-0 flex-1">
                   {text ? (
@@ -135,17 +156,24 @@ export function MessageList({ messages, status, error, isAdmin, onRetry, onFeedb
                         {text}
                       </ReactMarkdown>
                     </div>
-                  ) : isLast && status === 'submitted' ? (
-                    <p className="text-sm text-muted">Answering…</p>
+                  ) : showThinking ? (
+                    <div className="flex items-center gap-2 text-sm text-muted">
+                      <span className="flex items-center gap-1" aria-hidden="true">
+                        <span className="pp-thinking-dot h-1.5 w-1.5 rounded-full bg-muted" />
+                        <span className="pp-thinking-dot h-1.5 w-1.5 rounded-full bg-muted" />
+                        <span className="pp-thinking-dot h-1.5 w-1.5 rounded-full bg-muted" />
+                      </span>
+                      <span>Searching the policy documents…</span>
+                    </div>
                   ) : null}
 
-                  {isStreamingThis ? (
+                  {isStreamingThis && text.length > 0 ? (
                     <span className="ml-0.5 inline-block animate-pulse text-muted" aria-hidden="true">
                       ▍
                     </span>
                   ) : null}
 
-                  <Citations citations={citations} />
+                  <Citations citations={citations} className={isNew && isComplete ? 'pp-enter' : undefined} />
 
                   {isComplete && text ? (
                     <Feedback
@@ -157,7 +185,9 @@ export function MessageList({ messages, status, error, isAdmin, onRetry, onFeedb
                   ) : null}
 
                   {showEscalationCard ? (
-                    <EscalationCard onAskHuman={() => onEscalate(lastUserQuestion(messages, index))} />
+                    <div className={isNew ? 'pp-enter' : undefined}>
+                      <EscalationCard onAskHuman={() => onEscalate(lastUserQuestion(messages, index))} />
+                    </div>
                   ) : null}
                 </div>
               </li>
@@ -165,7 +195,7 @@ export function MessageList({ messages, status, error, isAdmin, onRetry, onFeedb
           })}
 
           {error ? (
-            <li key={`error-${messages.length}`}>
+            <li key={`error-${messages.length}`} className="pp-enter">
               <DegradedNotice
                 key={`${error.kind}:${error.message}:${messages.length}`}
                 error={error}
@@ -181,7 +211,7 @@ export function MessageList({ messages, status, error, isAdmin, onRetry, onFeedb
         <button
           type="button"
           onClick={jumpToLatest}
-          className="absolute bottom-4 left-1/2 -translate-x-1/2 rounded-full border border-border bg-surface px-4 py-2 text-xs font-medium text-ink shadow-float hover:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg"
+          className="pp-enter pp-pressable absolute bottom-4 left-1/2 -translate-x-1/2 flex min-h-11 items-center rounded-full border border-border bg-surface px-4 text-xs font-medium text-ink shadow-float hover:bg-surface-2 active:bg-surface-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)]"
         >
           Jump to latest
         </button>

@@ -23,7 +23,7 @@ export function Feedback({ messageId, onSubmit }: FeedbackProps) {
   const [submitting, setSubmitting] = useState(false)
 
   if (sent) {
-    return <p className="mt-3 text-xs text-muted">Thanks for the feedback.</p>
+    return <p className="pp-enter mt-3 text-xs text-muted">Thanks for the feedback.</p>
   }
 
   async function handleUp() {
@@ -57,7 +57,7 @@ export function Feedback({ messageId, onSubmit }: FeedbackProps) {
   }
 
   const iconButtonClasses = cn(
-    'flex h-11 min-h-11 w-11 items-center justify-center rounded-input text-lg leading-none text-muted',
+    'pp-pressable flex h-11 min-h-11 w-11 items-center justify-center rounded-input text-lg leading-none text-muted',
     'hover:bg-surface-2 hover:text-ink active:bg-surface-2',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg',
     'disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted',

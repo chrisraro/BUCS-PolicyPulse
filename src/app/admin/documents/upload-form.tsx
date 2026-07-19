@@ -17,7 +17,7 @@ const AUDIENCES = [
 const BUCKET = 'policy-documents'
 
 const inputClass =
-  'h-11 rounded-input border border-border bg-bg px-3 text-sm text-ink ' +
+  'h-11 w-full rounded-input border border-border bg-bg px-3 text-sm text-ink ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface'
 
 // The upload is a two-phase client-driven flow (see actions.ts for why):
@@ -148,7 +148,7 @@ export function UploadForm() {
           accept=".pdf,.txt,.md"
           onChange={handleFileChange}
           className={
-            'rounded-input border border-border bg-bg px-3 py-2 text-sm text-ink ' +
+            'min-h-11 w-full rounded-input border border-border bg-bg px-3 py-2 text-sm text-ink ' +
             'file:mr-3 file:rounded-input file:border-0 file:bg-surface-2 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-ink ' +
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface'
           }
@@ -209,13 +209,25 @@ export function UploadForm() {
         </p>
       ) : null}
       {phase !== 'idle' ? (
-        <p role="status" className="text-sm text-muted">
-          {PHASE_LABEL[phase]}
-        </p>
+        <div role="status" className="pp-enter flex flex-col gap-2">
+          <p className="text-sm text-muted">{PHASE_LABEL[phase]}</p>
+          <div className="pp-progress h-1 w-full">
+            <span />
+          </div>
+          {phase === 'indexing' ? (
+            <p className="text-xs text-muted">Large documents can take a few minutes.</p>
+          ) : null}
+        </div>
       ) : null}
 
       <div>
-        <Button type="submit" variant="primary" size="touch" loading={pending}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="touch"
+          loading={pending}
+          className="pp-pressable"
+        >
           {PHASE_LABEL[phase]}
         </Button>
       </div>

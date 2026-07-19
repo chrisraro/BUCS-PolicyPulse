@@ -42,7 +42,7 @@ export function Composer({ disabled, isBusy, onSubmit, onStop }: ComposerProps) 
   }
 
   return (
-    <div className="border-t border-border bg-surface pt-3 pb-[calc(env(safe-area-inset-bottom)_+_0.75rem)]">
+    <div className="border-t border-border bg-surface pt-3 pb-[calc(env(safe-area-inset-bottom)_+_0.75rem)] [@media(max-height:500px)]:pt-1.5 [@media(max-height:500px)]:pb-[calc(env(safe-area-inset-bottom)_+_0.375rem)]">
       <form
         onSubmit={(event) => {
           event.preventDefault()
@@ -66,12 +66,19 @@ export function Composer({ disabled, isBusy, onSubmit, onStop }: ComposerProps) 
             'min-h-11 flex-1 resize-none overflow-y-auto rounded-input border border-border bg-bg px-3 py-2.5 text-sm text-ink placeholder:text-muted',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface',
             'disabled:cursor-not-allowed disabled:opacity-60',
-            'transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)]',
+            'transition-[border-color,background-color,color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)]',
           )}
           style={{ maxHeight: MAX_HEIGHT_PX }}
         />
         {isBusy ? (
-          <Button type="button" variant="secondary" size="touch" onClick={onStop} aria-label="Stop generating">
+          <Button
+            type="button"
+            variant="secondary"
+            size="touch"
+            onClick={onStop}
+            aria-label="Stop generating"
+            className="pp-pressable"
+          >
             Stop
           </Button>
         ) : (
@@ -81,6 +88,7 @@ export function Composer({ disabled, isBusy, onSubmit, onStop }: ComposerProps) 
             size="touch"
             disabled={!value.trim()}
             aria-label="Send message"
+            className="pp-pressable"
           >
             Send
           </Button>

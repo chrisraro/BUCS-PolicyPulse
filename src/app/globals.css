@@ -230,6 +230,102 @@ dialog.pp-dialog[open]::backdrop {
 }
 
 /* ---------------------------------------------------------------------- *
+ * Shared motion utilities (state-conveying only; all neutralized by the
+ * reduced-motion override below).
+ * ---------------------------------------------------------------------- */
+
+/* New-content entrance: fade + 6px rise. For NEW messages/toasts/pills only —
+ * never applied to hydrated history or on page load (no load choreography). */
+@keyframes pp-fade-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.pp-enter {
+  animation: pp-fade-rise var(--duration-base) var(--ease-out) both;
+}
+
+/* Thinking indicator: three dots pulsing in sequence. */
+@keyframes pp-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+    transform: translateY(0);
+  }
+  30% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+.pp-thinking-dot {
+  animation: pp-dot 1.2s var(--ease-out) infinite;
+}
+.pp-thinking-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.pp-thinking-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+/* Skeleton shimmer for loading placeholders. */
+@keyframes pp-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+.pp-skeleton {
+  border-radius: 8px;
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 25%,
+    var(--surface) 50%,
+    var(--surface-2) 75%
+  );
+  background-size: 200% 100%;
+  animation: pp-shimmer 1.6s linear infinite;
+}
+
+/* Indeterminate progress bar for multi-second phases (upload/indexing). */
+@keyframes pp-indeterminate {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+.pp-progress {
+  overflow: hidden;
+  border-radius: 9999px;
+  background: var(--surface-2);
+}
+.pp-progress > span {
+  display: block;
+  height: 100%;
+  width: 40%;
+  border-radius: 9999px;
+  background: var(--primary);
+  animation: pp-indeterminate 1.4s var(--ease-out) infinite;
+}
+
+/* Button press feedback — tactile, 100ms tier. */
+.pp-pressable {
+  transition: transform 100ms var(--ease-out);
+}
+.pp-pressable:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* ---------------------------------------------------------------------- *
  * Motion: reduced-motion kills all transitions/animations globally.
  * ---------------------------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {

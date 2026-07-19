@@ -75,11 +75,18 @@ export default async function DocumentsPage() {
               <tbody className="divide-y divide-border">
                 {documents.map((doc) => (
                   <tr key={doc.id}>
-                    <td className="px-4 py-3 align-top text-ink">{doc.title}</td>
+                    <td className="px-4 py-3 align-top text-ink">
+                      <span className="block max-w-[16rem] truncate" title={doc.title}>
+                        {doc.title}
+                      </span>
+                    </td>
                     <td className="px-4 py-3 align-top">
-                      <StatusPill kind={doc.status} />
+                      <StatusPill key={doc.status} kind={doc.status} className="pp-enter" />
                       {doc.status === 'failed' && doc.error ? (
-                        <p className="mt-1 max-w-xs text-xs text-danger" title={doc.error}>
+                        <p
+                          className="mt-1 max-w-xs text-xs break-words text-danger"
+                          title={doc.error}
+                        >
                           {doc.error}
                         </p>
                       ) : null}
@@ -107,11 +114,13 @@ export default async function DocumentsPage() {
                 <dl className="flex flex-col gap-2 text-sm">
                   <div className="flex items-center justify-between gap-3">
                     <dt className="sr-only">Title</dt>
-                    <dd className="font-medium text-ink">{doc.title}</dd>
-                    <StatusPill kind={doc.status} />
+                    <dd className="min-w-0 truncate font-medium text-ink" title={doc.title}>
+                      {doc.title}
+                    </dd>
+                    <StatusPill key={doc.status} kind={doc.status} className="pp-enter shrink-0" />
                   </div>
                   {doc.status === 'failed' && doc.error ? (
-                    <p className="text-xs text-danger">{doc.error}</p>
+                    <p className="text-xs break-words text-danger">{doc.error}</p>
                   ) : null}
                   <div className="flex items-center justify-between">
                     <dt className="text-muted">Chunks</dt>

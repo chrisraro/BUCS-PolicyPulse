@@ -17,7 +17,7 @@ const KEY_COPY: Record<ChatProvider, string> = {
 }
 
 const inputClass =
-  'h-11 rounded-input border border-border bg-bg px-3 text-sm text-ink ' +
+  'h-11 w-full rounded-input border border-border bg-bg px-3 text-sm text-ink ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface'
 
 export function ApiKeyForm({
@@ -71,7 +71,7 @@ export function ApiKeyForm({
             name="provider"
             value={providerSelect}
             onChange={(event) => handleProviderChange(event.target.value as ChatProvider)}
-            className={inputClass}
+            className={`${inputClass} min-w-0 flex-1`}
           >
             {PROVIDERS.map((p) => (
               <option key={p} value={p}>
@@ -80,8 +80,10 @@ export function ApiKeyForm({
             ))}
           </select>
           <StatusPill
+            key={showVerified ? 'verified' : 'unverified'}
             kind={showVerified ? 'indexed' : 'pending'}
             label={showVerified ? 'Key verified' : 'Not verified'}
+            className="pp-enter shrink-0"
           />
         </div>
       </div>
@@ -184,7 +186,13 @@ export function ApiKeyForm({
       ) : null}
 
       <div>
-        <Button type="submit" variant="primary" size="touch" loading={pending}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="touch"
+          loading={pending}
+          className="pp-pressable"
+        >
           Save &amp; verify
         </Button>
       </div>

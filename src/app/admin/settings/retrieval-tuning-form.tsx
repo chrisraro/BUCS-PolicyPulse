@@ -6,7 +6,7 @@ import { initialActionState } from '../_lib/action-state'
 import { saveRagSettings } from './actions'
 
 const inputClass =
-  'h-11 rounded-input border border-border bg-bg px-3 text-sm text-ink ' +
+  'h-11 w-full rounded-input border border-border bg-bg px-3 text-sm text-ink ' +
   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface'
 
 export function RetrievalTuningForm({
@@ -122,7 +122,13 @@ export function RetrievalTuningForm({
       ) : null}
 
       <div>
-        <Button type="submit" variant="primary" size="touch" loading={pending}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="touch"
+          loading={pending}
+          className="pp-pressable"
+        >
           Save retrieval settings
         </Button>
       </div>

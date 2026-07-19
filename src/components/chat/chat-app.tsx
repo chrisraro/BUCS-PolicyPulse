@@ -7,6 +7,7 @@ import { AuthGateDialog } from './auth-gate-dialog'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
+import { cn } from '@/lib/cn'
 import type { Citation } from '@/lib/rag/citations'
 import { classifyChatError } from './chat-error'
 import { Composer } from './composer'
@@ -368,33 +369,40 @@ export function ChatApp({ initialSessions, user, hasIndexedDocs, isAdmin, assist
         />
       </div>
 
-      {drawerOpen ? (
-        <div className="fixed inset-0 z-[var(--z-drawer)] lg:hidden">
-          <button
-            type="button"
-            aria-label="Close menu"
-            onClick={closeDrawer}
-            className="absolute inset-0 bg-[var(--overlay)]"
+      {/* Always mounted (not conditionally rendered) so the slide/fade can
+          transition both ways — a conditionally-mounted drawer just snaps in
+          and out with no transition to animate through. `inert` (React 19)
+          removes it from the accessibility tree, tab order, and pointer/click
+          handling entirely while closed, so the off-screen-but-present panel
+          and its full-bleed overlay button never trap focus or intercept taps. */}
+      <div className="fixed inset-0 z-[var(--z-drawer)] lg:hidden" inert={!drawerOpen}>
+        <button
+          type="button"
+          aria-label="Close menu"
+          onClick={closeDrawer}
+          className={cn(
+            'absolute inset-0 bg-[var(--overlay)] transition-opacity duration-[var(--duration-slow)] ease-[var(--ease-out)]',
+            drawerOpen ? 'opacity-100' : 'opacity-0',
+          )}
+        />
+        <DrawerPanel onClose={closeDrawer} open={drawerOpen}>
+          <Sidebar
+            sessions={sessions}
+            activeSessionId={activeSessionId}
+            loadingSessionId={loadingSessionId}
+            onSelectSession={handleSelectSession}
+            onNewChat={handleNewChat}
+            onRequestDelete={requestDeleteSession}
+            user={user}
+            isAdmin={isAdmin}
+            onSignIn={openAuthGate}
+            onNavigate={closeDrawer}
           />
-          <DrawerPanel onClose={closeDrawer}>
-            <Sidebar
-              sessions={sessions}
-              activeSessionId={activeSessionId}
-              loadingSessionId={loadingSessionId}
-              onSelectSession={handleSelectSession}
-              onNewChat={handleNewChat}
-              onRequestDelete={requestDeleteSession}
-              user={user}
-              isAdmin={isAdmin}
-              onSignIn={openAuthGate}
-              onNavigate={closeDrawer}
-            />
-          </DrawerPanel>
-        </div>
-      ) : null}
+        </DrawerPanel>
+      </div>
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-[var(--z-sticky)] flex items-center gap-2 border-b border-border bg-surface px-4 py-3">
+        <header className="sticky top-0 z-[var(--z-sticky)] flex items-center gap-2 border-b border-border bg-surface px-4 py-3 [@media(max-height:500px)]:py-1.5">
           <button
             type="button"
             aria-label="Open menu"
@@ -417,7 +425,9 @@ export function ChatApp({ initialSessions, user, hasIndexedDocs, isAdmin, assist
 
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <div className="mx-auto flex min-h-0 w-full max-w-[46rem] flex-1 flex-col overflow-hidden px-4 sm:px-6">
-            {chat.messages.length === 0 ? (
+            {loadingSessionId ? (
+              <MessageAreaSkeleton />
+            ) : chat.messages.length === 0 ? (
               isGuest && pendingGuestText ? (
                 <GuestHeldMessage
                   text={pendingGuestText}
@@ -520,6 +530,25 @@ function GuestHeldMessage({
   )
 }
 
+/**
+ * Shown in the message column while a session's history is being fetched
+ * (`handleSelectSession`'s `loadingSessionId` window) — replaces the previous
+ * session's messages/the empty state with a placeholder instead of leaving a
+ * stale or blank column up while the fetch is in flight.
+ */
+function MessageAreaSkeleton() {
+  return (
+    <div className="flex flex-1 flex-col justify-center gap-4 py-6">
+      <p role="status" aria-live="polite" className="sr-only">
+        Loading conversation…
+      </p>
+      <div className="pp-skeleton h-4 w-2/3" aria-hidden="true" />
+      <div className="pp-skeleton h-4 w-full" aria-hidden="true" />
+      <div className="pp-skeleton h-4 w-5/6" aria-hidden="true" />
+    </div>
+  )
+}
+
 function HamburgerIcon() {
   return (
     <svg
@@ -537,11 +566,26 @@ function HamburgerIcon() {
   )
 }
 
-/** Slide-over drawer content: focus-trapped, closes on Escape or overlay tap. */
-function DrawerPanel({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+/**
+ * Slide-over drawer content: focus-trapped, closes on Escape or overlay tap.
+ * Stays mounted (see the always-rendered wrapper above) and slides via
+ * `transform` — the focus trap/auto-focus only (re)arms while `open` is true,
+ * matching what used to be mount/unmount-driven when this was conditionally
+ * rendered.
+ */
+function DrawerPanel({
+  children,
+  onClose,
+  open,
+}: {
+  children: React.ReactNode
+  onClose: () => void
+  open: boolean
+}) {
   const panelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
+    if (!open) return
     const panel = panelRef.current
     if (!panel) return
     const previouslyFocused = document.activeElement as HTMLElement | null
@@ -573,7 +617,7 @@ function DrawerPanel({ children, onClose }: { children: React.ReactNode; onClose
       document.removeEventListener('keydown', handleKeyDown)
       previouslyFocused?.focus()
     }
-  }, [onClose])
+  }, [onClose, open])
 
   return (
     <div
@@ -581,7 +625,11 @@ function DrawerPanel({ children, onClose }: { children: React.ReactNode; onClose
       role="dialog"
       aria-modal="true"
       aria-label="Chat sessions"
-      className="relative h-full w-[288px] max-w-[85vw] border-r border-border bg-surface"
+      className={cn(
+        'relative h-full w-[288px] max-w-[85vw] border-r border-border bg-surface',
+        'transition-transform duration-[var(--duration-slow)] ease-[var(--ease-out)]',
+        open ? 'translate-x-0' : '-translate-x-full',
+      )}
     >
       {children}
     </div>

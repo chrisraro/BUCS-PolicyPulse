@@ -31,7 +31,7 @@ export function ResolveForm({ escalationId }: { escalationId: string }) {
         required
         rows={3}
         placeholder="What did you tell the user, or where should they look?"
-        className="rounded-input border border-border bg-bg px-3 py-2 text-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
+        className="w-full rounded-input border border-border bg-bg px-3 py-2 text-sm text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-surface"
       />
       {state.status === 'error' ? (
         <p role="alert" className="text-sm text-danger">
@@ -39,7 +39,13 @@ export function ResolveForm({ escalationId }: { escalationId: string }) {
         </p>
       ) : null}
       <div>
-        <Button type="submit" variant="primary" size="touch" loading={pending}>
+        <Button
+          type="submit"
+          variant="primary"
+          size="touch"
+          loading={pending}
+          className="pp-pressable"
+        >
           Mark resolved
         </Button>
       </div>

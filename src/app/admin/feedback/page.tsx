@@ -113,7 +113,7 @@ export default async function FeedbackPage({
                           <summary className="cursor-pointer">
                             {excerpt(row.chat_messages.content)}
                           </summary>
-                          <p className="mt-2 max-w-prose whitespace-pre-wrap text-muted">
+                          <p className="mt-2 max-w-prose break-words whitespace-pre-wrap text-muted">
                             {row.chat_messages.content}
                           </p>
                         </details>
@@ -121,7 +121,9 @@ export default async function FeedbackPage({
                         <span className="text-muted">Message deleted</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 align-top text-muted">{row.comment || '—'}</td>
+                    <td className="max-w-xs px-4 py-3 align-top break-words text-muted">
+                      {row.comment || '—'}
+                    </td>
                     <td className="px-4 py-3 align-top text-muted">
                       {row.profiles?.email ?? '—'}
                     </td>
@@ -152,7 +154,7 @@ export default async function FeedbackPage({
                           <summary className="cursor-pointer">
                             {excerpt(row.chat_messages.content)}
                           </summary>
-                          <p className="mt-2 whitespace-pre-wrap text-muted">
+                          <p className="mt-2 break-words whitespace-pre-wrap text-muted">
                             {row.chat_messages.content}
                           </p>
                         </details>
@@ -164,7 +166,7 @@ export default async function FeedbackPage({
                   {row.comment ? (
                     <div>
                       <dt className="text-muted">Comment</dt>
-                      <dd className="text-ink">{row.comment}</dd>
+                      <dd className="break-words text-ink">{row.comment}</dd>
                     </div>
                   ) : null}
                   <div className="flex items-center justify-between">
