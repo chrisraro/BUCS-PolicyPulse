@@ -6,47 +6,61 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { runIngest } from '@/lib/rag/ingest-runner'
 import type { UserRole } from '@/lib/auth'
 import type { ActionState } from '../_lib/action-state'
+import { ALLOWED_MIME_TYPES, isValidStoragePath } from '../_lib/upload-validation'
 
 const BUCKET = 'policy-documents'
-const ALLOWED_EXTENSIONS = ['pdf', 'txt', 'md'] as const
 
-const MIME_BY_EXT: Record<(typeof ALLOWED_EXTENSIONS)[number], string> = {
-  pdf: 'application/pdf',
-  txt: 'text/plain',
-  md: 'text/markdown',
+export interface RegisterDocumentInput {
+  storagePath: string
+  title: string
+  mimeType: string
+  audience: string[]
 }
 
-function extOf(filename: string): string {
-  const match = /\.([^.]+)$/.exec(filename)
-  return match ? match[1].toLowerCase() : ''
-}
-
-function stripExtension(filename: string): string {
-  return filename.replace(/\.[^./\\]+$/, '')
-}
-
-export async function uploadDocument(_prev: ActionState, formData: FormData): Promise<ActionState> {
+/**
+ * Registers a document that the browser has already uploaded directly to
+ * Supabase Storage (see `upload-form.tsx`). This action never receives file
+ * bytes — only metadata — which is what keeps it clear of both the Next.js
+ * Server Action body-size limit and Vercel's serverless request cap that
+ * made the old `uploadDocument` action crash on real PDFs.
+ *
+ * `storagePath` is the only field with any trust boundary implication (it
+ * becomes part of a storage lookup + a DB row other code will later
+ * `download()`), so it gets both a shape check (`isValidStoragePath` — must
+ * be `${uuid}/filename`, rejecting traversal, leading slashes, and missing
+ * uuid segments) and an existence check against the bucket. `title` just
+ * needs to be non-empty text; `mimeType`/`audience` are checked against
+ * fixed allow-lists. Nothing here is transformed or sanitized further before
+ * being stored: `storage_path` is passed straight into the query builder
+ * (correct, since Postgres bind parameters are used, not string
+ * concatenation), so the regex + existence check are the only hardening this
+ * action performs.
+ */
+export async function registerDocument(input: RegisterDocumentInput): Promise<ActionState> {
+  let uploadedBy: string
   try {
-    await requireAdmin()
+    const ctx = await requireAdmin()
+    uploadedBy = ctx.user.id
   } catch {
     return { status: 'error', message: 'Admin access required.' }
   }
 
-  const file = formData.get('file')
-  if (!(file instanceof File) || file.size === 0) {
-    return { status: 'error', message: 'Choose a file to upload.' }
+  const storagePath = String(input.storagePath ?? '').trim()
+  if (!storagePath || !isValidStoragePath(storagePath)) {
+    return { status: 'error', message: 'Invalid storage path.' }
   }
 
-  const ext = extOf(file.name)
-  if (!(ALLOWED_EXTENSIONS as readonly string[]).includes(ext)) {
-    return { status: 'error', message: 'Only .pdf, .txt, and .md files are supported.' }
+  const title = String(input.title ?? '').trim()
+  if (!title) {
+    return { status: 'error', message: 'Title is required.' }
   }
 
-  const titleInput = String(formData.get('title') ?? '').trim()
-  const title = titleInput || stripExtension(file.name)
+  const mimeType = String(input.mimeType ?? '')
+  if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
+    return { status: 'error', message: 'Unsupported file type.' }
+  }
 
-  const audience = formData
-    .getAll('audience')
+  const audience = (input.audience ?? [])
     .map(String)
     .filter((v): v is UserRole => v === 'student' || v === 'faculty' || v === 'admin')
   if (audience.length === 0) {
@@ -54,23 +68,35 @@ export async function uploadDocument(_prev: ActionState, formData: FormData): Pr
   }
 
   const admin = createAdminClient()
-  const storagePath = `${crypto.randomUUID()}/${file.name}`
-  const mimeType = file.type || MIME_BY_EXT[ext as (typeof ALLOWED_EXTENSIONS)[number]]
 
-  const { error: uploadError } = await admin.storage
-    .from(BUCKET)
-    .upload(storagePath, file, { contentType: mimeType, upsert: false })
-  if (uploadError) {
-    return { status: 'error', message: `Upload failed: ${uploadError.message}` }
+  // The DB shouldn't ever point at a storage object that doesn't exist, so
+  // confirm the upload actually landed before inserting. `list()` on the
+  // uuid folder is the cheapest reliable existence check available on the
+  // storage client (a HEAD-style call, no bytes transferred).
+  const [folder, ...rest] = storagePath.split('/')
+  const filename = rest.join('/')
+  const { data: listing, error: listError } = await admin.storage.from(BUCKET).list(folder)
+  const exists = !listError && (listing ?? []).some((f) => f.name === filename)
+  if (!exists) {
+    return { status: 'error', message: 'Uploaded file not found in storage — please try again.' }
   }
 
   const { data: doc, error: insertError } = await admin
     .from('documents')
-    .insert({ title, storage_path: storagePath, mime_type: mimeType, audience })
+    .insert({
+      title,
+      storage_path: storagePath,
+      mime_type: mimeType,
+      audience,
+      uploaded_by: uploadedBy,
+    })
     .select('id')
     .single()
 
   if (insertError || !doc) {
+    // The upload already landed in storage (confirmed above) but the DB row
+    // failed — clean up the orphaned object rather than leaving a file with
+    // no corresponding document.
     await admin.storage.from(BUCKET).remove([storagePath])
     return {
       status: 'error',
