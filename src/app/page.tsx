@@ -45,12 +45,20 @@ export default async function Home() {
   // state) — read it with the service-role client and reduce it to a
   // boolean immediately. Only that boolean crosses into client props;
   // the key itself never leaves this server component.
-  const { data: aiSettings } = await createAdminClient()
-    .from('ai_settings')
-    .select('api_key, verified_at')
-    .eq('id', 1)
-    .single()
-  const aiConfigured = !!aiSettings?.api_key
+  // If the server itself is not fully configured (SUPABASE_SECRET_KEY absent,
+  // e.g. a fresh deploy), degrade to the offline state instead of crashing —
+  // free-tier honesty applies to our own misconfiguration too.
+  let aiConfigured = false
+  try {
+    const { data: aiSettings } = await createAdminClient()
+      .from('ai_settings')
+      .select('api_key, verified_at')
+      .eq('id', 1)
+      .single()
+    aiConfigured = !!aiSettings?.api_key
+  } catch {
+    aiConfigured = false
+  }
 
   const role = profile.role as UserRole
   const name = (profile.full_name as string) || (profile.email as string) || user.email || 'Account'
