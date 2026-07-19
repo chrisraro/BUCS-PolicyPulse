@@ -325,6 +325,64 @@ dialog.pp-dialog[open]::backdrop {
   transform: scale(0.97);
 }
 
+/* Loading status label — a brighter band sweeps across muted text, reading
+ * as "actively processing". A recognized loading affordance (transient
+ * labels only), not decorative gradient text on content. */
+@keyframes pp-text-shimmer {
+  from {
+    background-position: 150% center;
+  }
+  to {
+    background-position: -50% center;
+  }
+}
+.pp-shimmer-text {
+  background-image: linear-gradient(100deg, var(--muted) 35%, var(--ink) 50%, var(--muted) 65%);
+  background-size: 200% auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: pp-text-shimmer 2.4s linear infinite;
+}
+
+/* Working-avatar breathing ring — a soft primary halo expands and fades,
+ * signalling the assistant is alive and synthesizing. */
+@keyframes pp-breathe {
+  0% {
+    box-shadow: 0 0 0 0 oklch(from var(--primary) l c h / 0.45);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 5px oklch(from var(--primary) l c h / 0);
+  }
+}
+.pp-breathe {
+  animation: pp-breathe 1.8s var(--ease-out) infinite;
+}
+
+/* Streaming caret — a steady blink at the tail of live text. */
+@keyframes pp-caret {
+  0%,
+  45% {
+    opacity: 1;
+  }
+  55%,
+  100% {
+    opacity: 0;
+  }
+}
+.pp-caret {
+  animation: pp-caret 1s steps(1, end) infinite;
+}
+
+/* Staggered entrance for a short list appearing at once (welcome prompts).
+ * Cascade capped well under 300ms; --i set per item. */
+.pp-stagger {
+  animation: pp-fade-rise var(--duration-base) var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * 60ms);
+}
+
 /* ---------------------------------------------------------------------- *
  * Motion: reduced-motion kills all transitions/animations globally.
  * ---------------------------------------------------------------------- */
@@ -336,5 +394,21 @@ dialog.pp-dialog[open]::backdrop {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* Reduced-motion: restore the resting appearance of effects that would look
+ * broken frozen mid-animation. Placed AFTER the global override so it wins. */
+@media (prefers-reduced-motion: reduce) {
+  .pp-shimmer-text {
+    background-image: none;
+    color: var(--muted);
+    -webkit-text-fill-color: var(--muted);
+  }
+  .pp-breathe {
+    box-shadow: none;
+  }
+  .pp-caret {
+    opacity: 1;
   }
 }

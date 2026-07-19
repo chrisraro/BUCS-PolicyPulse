@@ -61,6 +61,25 @@ const markdownComponents: Components = {
   ),
 }
 
+// Honest across the whole wait: retrieval + local embedding dominate the
+// latency, so "Searching…" is accurate from submit through the first token.
+const THINKING_LABEL = 'Searching the policy documents…'
+
+/** Dots + shimmering status label. Shared by the standalone synthesis row and
+ * the in-message empty-streaming window so the loading affordance is identical. */
+function ThinkingLabel() {
+  return (
+    <div className="flex min-h-5 items-center gap-2 text-sm">
+      <span className="flex items-center gap-1" aria-hidden="true">
+        <span className="pp-thinking-dot h-1.5 w-1.5 rounded-full bg-muted" />
+        <span className="pp-thinking-dot h-1.5 w-1.5 rounded-full bg-muted" />
+        <span className="pp-thinking-dot h-1.5 w-1.5 rounded-full bg-muted" />
+      </span>
+      <span className="pp-shimmer-text font-medium">{THINKING_LABEL}</span>
+    </div>
+  )
+}
+
 /**
  * Conversation column. User bubbles right-aligned on `--surface-2`; assistant
  * answers render full-column markdown. Auto-scroll only pins to bottom while
@@ -148,29 +167,24 @@ export function MessageList({ messages, status, error, isAdmin, onRetry, onFeedb
 
             return (
               <li key={message.id} className={cn('flex gap-3', isNew && 'pp-enter')}>
-                <span className="mt-1 h-5 w-5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+                <span
+                  className={cn('mt-1 h-5 w-5 shrink-0 rounded-full bg-primary', showThinking && 'pp-breathe')}
+                  aria-hidden="true"
+                />
                 <div className="min-w-0 flex-1">
                   {text ? (
                     <div className="markdown-body text-sm text-ink">
                       <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                         {text}
                       </ReactMarkdown>
+                      {isStreamingThis ? (
+                        <span className="pp-caret ml-0.5 inline-block align-baseline text-primary" aria-hidden="true">
+                          ▍
+                        </span>
+                      ) : null}
                     </div>
                   ) : showThinking ? (
-                    <div className="flex items-center gap-2 text-sm text-muted">
-                      <span className="flex items-center gap-1" aria-hidden="true">
-                        <span className="pp-thinking-dot h-1.5 w-1.5 rounded-full bg-muted" />
-                        <span className="pp-thinking-dot h-1.5 w-1.5 rounded-full bg-muted" />
-                        <span className="pp-thinking-dot h-1.5 w-1.5 rounded-full bg-muted" />
-                      </span>
-                      <span>Searching the policy documents…</span>
-                    </div>
-                  ) : null}
-
-                  {isStreamingThis && text.length > 0 ? (
-                    <span className="ml-0.5 inline-block animate-pulse text-muted" aria-hidden="true">
-                      ▍
-                    </span>
+                    <ThinkingLabel />
                   ) : null}
 
                   <Citations citations={citations} className={isNew && isComplete ? 'pp-enter' : undefined} />
@@ -193,6 +207,20 @@ export function MessageList({ messages, status, error, isAdmin, onRetry, onFeedb
               </li>
             )
           })}
+
+          {/* Synthesis loading row: during 'submitted' the assistant message
+              does not exist yet (the array ends with the user's turn), so the
+              in-message indicator above cannot render. This standalone row
+              covers that whole retrieval + embedding + first-token window —
+              the longest wait — so the chat never looks frozen. */}
+          {isBusy && lastMessage?.role !== 'assistant' ? (
+            <li className="pp-enter flex gap-3">
+              <span className="pp-breathe mt-1 h-5 w-5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
+              <div className="min-w-0 flex-1">
+                <ThinkingLabel />
+              </div>
+            </li>
+          ) : null}
 
           {error ? (
             <li key={`error-${messages.length}`} className="pp-enter">

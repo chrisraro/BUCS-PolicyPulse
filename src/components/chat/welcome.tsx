@@ -1,5 +1,6 @@
 'use client'
 
+import type { CSSProperties } from 'react'
 import Link from 'next/link'
 import { cn } from '@/lib/cn'
 
@@ -80,16 +81,18 @@ export function Welcome({ hasIndexedDocs, isAdmin, assistantOffline, onPrompt }:
         </p>
       </div>
       <div className="grid w-full max-w-md grid-cols-1 gap-3 sm:grid-cols-2">
-        {SUGGESTED_PROMPTS.map((prompt) => (
+        {SUGGESTED_PROMPTS.map((prompt, index) => (
           <button
             key={prompt}
             type="button"
             onClick={() => onPrompt(prompt)}
+            style={{ '--i': index } as CSSProperties}
             className={cn(
-              'min-h-11 rounded-card border border-border bg-surface px-4 py-3 text-left text-sm text-ink',
-              'hover:bg-surface-2 active:bg-surface-2',
+              'pp-stagger min-h-11 rounded-card border border-border bg-surface px-4 py-3 text-left text-sm text-ink',
+              'hover:-translate-y-0.5 hover:border-primary/40 hover:bg-surface-2 hover:shadow-float',
+              'active:translate-y-0 active:bg-surface-2',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg',
-              'transition-colors duration-[var(--duration-fast)] ease-[var(--ease-out)]',
+              'transition-[transform,background-color,border-color,box-shadow] duration-[var(--duration-fast)] ease-[var(--ease-out)]',
             )}
           >
             {prompt}
