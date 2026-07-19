@@ -1,8 +1,31 @@
 'use client'
 
 import type { CSSProperties } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { cn } from '@/lib/cn'
+import { Logo } from '@/components/logo'
+
+/** Animated hero seal: entrance + breathing halo + periodic sheen sweep. */
+function WelcomeLogo() {
+  return (
+    <div className="pp-logo-enter relative mx-auto mb-1 h-24 w-24 sm:h-28 sm:w-28">
+      <span aria-hidden="true" className="pp-logo-halo absolute inset-0 rounded-full bg-primary/30 blur-2xl" />
+      <Image
+        src="/bucs-logo.png"
+        alt="Bicol University College of Science seal"
+        fill
+        sizes="112px"
+        priority
+        className="relative object-contain"
+        style={{ filter: 'drop-shadow(0 2px 10px oklch(0 0 0 / 0.22))' }}
+      />
+      <span aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden rounded-full">
+        <span className="pp-logo-sheen absolute inset-y-0 left-0 w-1/2" />
+      </span>
+    </div>
+  )
+}
 
 export interface WelcomeProps {
   hasIndexedDocs: boolean
@@ -29,6 +52,7 @@ export function Welcome({ hasIndexedDocs, isAdmin, assistantOffline, onPrompt }:
   if (assistantOffline) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 py-16 text-center">
+        <Logo size={56} priority className="pp-enter mb-1" />
         <h1 className="text-balance font-serif text-2xl font-semibold text-ink sm:text-3xl">
           Ask about any BUCS policy
         </h1>
@@ -50,6 +74,7 @@ export function Welcome({ hasIndexedDocs, isAdmin, assistantOffline, onPrompt }:
   if (!hasIndexedDocs) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 py-16 text-center">
+        <Logo size={56} priority className="pp-enter mb-1" />
         <h1 className="text-balance font-serif text-2xl font-semibold text-ink sm:text-3xl">
           Ask about any BUCS policy
         </h1>
@@ -74,8 +99,9 @@ export function Welcome({ hasIndexedDocs, isAdmin, assistantOffline, onPrompt }:
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 py-16 text-center">
-      <div>
-        <h1 className="text-balance font-serif text-2xl font-semibold text-ink sm:text-3xl">
+      <div className="flex flex-col items-center">
+        <WelcomeLogo />
+        <h1 className="mt-4 text-balance font-serif text-2xl font-semibold text-ink sm:text-3xl">
           Ask about any BUCS policy
         </h1>
         <p className="mt-2 text-sm text-muted">

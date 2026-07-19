@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
+import { Logo } from '@/components/logo'
 import { login, signup } from './actions'
 
 interface LoginPageProps {
@@ -15,6 +16,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-bg px-4 py-12">
       <div className="w-full max-w-sm rounded-xl border border-border bg-surface p-8">
+        <Logo size={64} priority className="mx-auto mb-3" />
         <h1 className="text-balance text-center font-serif text-2xl font-semibold tracking-tight text-ink">
           BUCS PolicyPulse
         </h1>

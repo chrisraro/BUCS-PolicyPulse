@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { ThemeToggle } from '@/components/theme-toggle'
+import { Logo } from '@/components/logo'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/cn'
 import type { ChatAppUser, ChatSessionSummary } from './types'
@@ -67,6 +68,10 @@ export function Sidebar({
   if (user === null) {
     return (
       <div className="flex h-full flex-col">
+        <div className="flex items-center gap-2 px-4 pt-4">
+          <Logo size={24} />
+          <span className="font-serif text-base font-semibold text-ink">PolicyPulse</span>
+        </div>
         <div className="p-4">
           <Button variant="primary" className="w-full" disabled title="Sign in to start a new chat">
             New chat
@@ -99,6 +104,10 @@ export function Sidebar({
 
   return (
     <div className="flex h-full flex-col">
+      <div className="flex items-center gap-2 px-4 pt-4">
+        <Logo size={24} />
+        <span className="font-serif text-base font-semibold text-ink">PolicyPulse</span>
+      </div>
       <div className="p-4">
         <Button
           variant="primary"

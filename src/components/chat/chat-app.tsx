@@ -7,6 +7,7 @@ import { AuthGateDialog } from './auth-gate-dialog'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { useToast } from '@/components/ui/toast'
+import { Logo } from '@/components/logo'
 import { cn } from '@/lib/cn'
 import type { Citation } from '@/lib/rag/citations'
 import { classifyChatError } from './chat-error'
@@ -411,7 +412,10 @@ export function ChatApp({ initialSessions, user, hasIndexedDocs, isAdmin, assist
           >
             <HamburgerIcon />
           </button>
-          <span className="font-serif text-lg font-semibold text-ink lg:hidden">PolicyPulse</span>
+          <span className="flex items-center gap-2 lg:hidden">
+            <Logo size={26} priority />
+            <span className="font-serif text-lg font-semibold text-ink">PolicyPulse</span>
+          </span>
           <div className="ml-auto flex items-center gap-2">
             <EscalationButton onClick={() => openEscalation(lastUserQuestion(chat.messages))} />
           </div>
