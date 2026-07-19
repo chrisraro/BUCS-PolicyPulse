@@ -35,6 +35,12 @@ let embedderPromise: Promise<FeatureExtractionPipeline> | null = null
 
 function getEmbedder(): Promise<FeatureExtractionPipeline> {
   if (!embedderPromise) {
+    // Runs on the native onnxruntime-node CPU backend. On Vercel the platform
+    // .so is NOT picked up by automatic file tracing (prod logs showed
+    // "libonnxruntime.so.1: cannot open shared object file") — next.config.ts
+    // outputFileTracingIncludes force-ships bin/napi-v3/linux/x64 for the
+    // routes that embed. The node build supports only native devices (wasm is
+    // web-build-only), so tracing the binary is the required fix, not a choice.
     embedderPromise = pipeline<'feature-extraction'>('feature-extraction', EMBEDDING_MODEL_ID)
   }
   return embedderPromise
