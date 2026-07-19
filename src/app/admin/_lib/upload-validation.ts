@@ -97,3 +97,21 @@ export const STORAGE_PATH_PATTERN = /^[0-9a-f-]{36}\/[^/\\]+$/i
 export function isValidStoragePath(path: string): boolean {
   return STORAGE_PATH_PATTERN.test(path)
 }
+
+/**
+ * Derives the canonical mime type for an already-shape-validated
+ * `storagePath` (see `isValidStoragePath`) purely from the extension of its
+ * filename segment. This is the server's source of truth for `mime_type` —
+ * unlike `mimeTypeFor`, it never trusts a client-reported value, because
+ * browsers frequently report non-canonical or empty `file.type` values
+ * (especially for `.md`), which would otherwise let a file pass client-side
+ * validation, upload to storage, and only then fail the server's allow-list
+ * check — leaving an orphaned storage object behind. Returns `null` for an
+ * unrecognized or missing extension so the caller can treat it as a
+ * validation failure.
+ */
+export function mimeTypeFromStoragePath(storagePath: string): string | null {
+  const filename = storagePath.split('/').pop() ?? ''
+  const ext = extOf(filename)
+  return isAllowedExtension(ext) ? MIME_BY_EXT[ext] : null
+}

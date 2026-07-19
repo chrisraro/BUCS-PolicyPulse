@@ -122,7 +122,6 @@ export function UploadForm() {
     const result = await registerDocument({
       storagePath,
       title: finalTitle,
-      mimeType,
       audience,
     })
     setPhase('idle')

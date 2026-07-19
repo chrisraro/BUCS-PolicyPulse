@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   isValidStoragePath,
   mimeTypeFor,
+  mimeTypeFromStoragePath,
   validateUploadFile,
 } from '../upload-validation'
 
@@ -89,5 +90,35 @@ describe('isValidStoragePath', () => {
 
   it('rejects an empty string', () => {
     expect(isValidStoragePath('')).toBe(false)
+  })
+})
+
+describe('mimeTypeFromStoragePath', () => {
+  const uuid = '3fa85f64-5717-4562-b3fc-2c963f66afa6'
+
+  it('derives application/pdf for a .pdf storage path', () => {
+    expect(mimeTypeFromStoragePath(`${uuid}/policy.pdf`)).toBe('application/pdf')
+  })
+
+  it('derives text/plain for a .txt storage path', () => {
+    expect(mimeTypeFromStoragePath(`${uuid}/notes.txt`)).toBe('text/plain')
+  })
+
+  it('derives text/markdown for a .md storage path', () => {
+    expect(mimeTypeFromStoragePath(`${uuid}/readme.md`)).toBe('text/markdown')
+  })
+
+  it('returns null for an unrecognized extension', () => {
+    expect(mimeTypeFromStoragePath(`${uuid}/archive.zip`)).toBeNull()
+  })
+
+  it('returns null when the filename has no extension', () => {
+    expect(mimeTypeFromStoragePath(`${uuid}/noextension`)).toBeNull()
+  })
+
+  it('is case-insensitive on the extension', () => {
+    expect(mimeTypeFromStoragePath(`${uuid}/POLICY.PDF`)).toBe('application/pdf')
+    expect(mimeTypeFromStoragePath(`${uuid}/Notes.TXT`)).toBe('text/plain')
+    expect(mimeTypeFromStoragePath(`${uuid}/Readme.Md`)).toBe('text/markdown')
   })
 })

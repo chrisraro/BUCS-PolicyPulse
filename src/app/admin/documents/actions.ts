@@ -6,14 +6,13 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { runIngest } from '@/lib/rag/ingest-runner'
 import type { UserRole } from '@/lib/auth'
 import type { ActionState } from '../_lib/action-state'
-import { ALLOWED_MIME_TYPES, isValidStoragePath } from '../_lib/upload-validation'
+import { isValidStoragePath, mimeTypeFromStoragePath } from '../_lib/upload-validation'
 
 const BUCKET = 'policy-documents'
 
 export interface RegisterDocumentInput {
   storagePath: string
   title: string
-  mimeType: string
   audience: string[]
 }
 
@@ -29,13 +28,37 @@ export interface RegisterDocumentInput {
  * `download()`), so it gets both a shape check (`isValidStoragePath` — must
  * be `${uuid}/filename`, rejecting traversal, leading slashes, and missing
  * uuid segments) and an existence check against the bucket. `title` just
- * needs to be non-empty text; `mimeType`/`audience` are checked against
- * fixed allow-lists. Nothing here is transformed or sanitized further before
- * being stored: `storage_path` is passed straight into the query builder
- * (correct, since Postgres bind parameters are used, not string
- * concatenation), so the regex + existence check are the only hardening this
- * action performs.
+ * needs to be non-empty text; `audience` is checked against a fixed
+ * allow-list. `mimeType` is NOT accepted from the client at all — browsers
+ * frequently report non-canonical or empty `file.type` values (especially
+ * for `.md`), which would otherwise let a file pass client-side validation,
+ * upload to storage, and only then fail a server-side allow-list check.
+ * Instead the mime type is derived server-side from the (already
+ * shape-validated) storage path's extension via `mimeTypeFromStoragePath`.
+ * Nothing here is transformed or sanitized further before being stored:
+ * `storage_path` is passed straight into the query builder (correct, since
+ * Postgres bind parameters are used, not string concatenation), so the
+ * regex + existence check are the only hardening this action performs.
+ *
+ * Any validation failure that occurs *after* the storage path's shape has
+ * been confirmed valid means the caller pointed at a real (or plausibly
+ * real) object this action is responsible for — so those failures make a
+ * best-effort attempt to remove the storage object before returning the
+ * error, to avoid leaving it permanently orphaned. Failures before the
+ * shape check (admin auth, invalid shape) never touch storage: a
+ * non-admin can't have a legitimate upload to clean up, and an
+ * unvalidated path string must never be passed to a delete call.
  */
+async function cleanupOrphan(admin: ReturnType<typeof createAdminClient>, storagePath: string) {
+  try {
+    await admin.storage.from(BUCKET).remove([storagePath])
+  } catch {
+    // Best-effort only — the caller is already returning a validation error;
+    // a failed cleanup just leaves the orphan for later, it must not mask
+    // the original error.
+  }
+}
+
 export async function registerDocument(input: RegisterDocumentInput): Promise<ActionState> {
   let uploadedBy: string
   try {
@@ -50,13 +73,17 @@ export async function registerDocument(input: RegisterDocumentInput): Promise<Ac
     return { status: 'error', message: 'Invalid storage path.' }
   }
 
+  const admin = createAdminClient()
+
   const title = String(input.title ?? '').trim()
   if (!title) {
+    await cleanupOrphan(admin, storagePath)
     return { status: 'error', message: 'Title is required.' }
   }
 
-  const mimeType = String(input.mimeType ?? '')
-  if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
+  const mimeType = mimeTypeFromStoragePath(storagePath)
+  if (!mimeType) {
+    await cleanupOrphan(admin, storagePath)
     return { status: 'error', message: 'Unsupported file type.' }
   }
 
@@ -64,15 +91,15 @@ export async function registerDocument(input: RegisterDocumentInput): Promise<Ac
     .map(String)
     .filter((v): v is UserRole => v === 'student' || v === 'faculty' || v === 'admin')
   if (audience.length === 0) {
+    await cleanupOrphan(admin, storagePath)
     return { status: 'error', message: 'Choose at least one audience.' }
   }
-
-  const admin = createAdminClient()
 
   // The DB shouldn't ever point at a storage object that doesn't exist, so
   // confirm the upload actually landed before inserting. `list()` on the
   // uuid folder is the cheapest reliable existence check available on the
-  // storage client (a HEAD-style call, no bytes transferred).
+  // storage client (a HEAD-style call, no bytes transferred). No cleanup on
+  // failure here — if the file isn't there, there's nothing to remove.
   const [folder, ...rest] = storagePath.split('/')
   const filename = rest.join('/')
   const { data: listing, error: listError } = await admin.storage.from(BUCKET).list(folder)
@@ -94,10 +121,20 @@ export async function registerDocument(input: RegisterDocumentInput): Promise<Ac
     .single()
 
   if (insertError || !doc) {
+    if (insertError?.code === '23505') {
+      // Unique violation on storage_path: the storage object may belong to
+      // an EXISTING document row (e.g. a duplicate registration attempt), so
+      // removing it here would delete another document's live file. Leave
+      // storage untouched.
+      return {
+        status: 'error',
+        message: 'A document already exists for this file path — refresh and check the documents list.',
+      }
+    }
     // The upload already landed in storage (confirmed above) but the DB row
-    // failed — clean up the orphaned object rather than leaving a file with
-    // no corresponding document.
-    await admin.storage.from(BUCKET).remove([storagePath])
+    // failed for some other reason — clean up the orphaned object rather
+    // than leaving a file with no corresponding document.
+    await cleanupOrphan(admin, storagePath)
     return {
       status: 'error',
       message: `Could not save the document record: ${insertError?.message ?? 'unknown error'}`,
