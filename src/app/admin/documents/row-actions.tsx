@@ -26,7 +26,7 @@ export function ReindexButton({ documentId }: { documentId: string }) {
   return (
     <form action={formAction}>
       <input type="hidden" name="documentId" value={documentId} />
-      <Button type="submit" variant="secondary" loading={pending}>
+      <Button type="submit" variant="secondary" size="touch" loading={pending}>
         Re-index
       </Button>
     </form>
@@ -66,7 +66,7 @@ export function DeleteDocumentButton({
 
   return (
     <>
-      <Button variant="danger" onClick={() => setOpen(true)}>
+      <Button variant="danger" size="touch" onClick={() => setOpen(true)}>
         Delete
       </Button>
       <Dialog open={open} onClose={() => setOpen(false)} title="Delete document">
@@ -76,10 +76,10 @@ export function DeleteDocumentButton({
         </p>
         <form action={formAction} className="mt-4 flex justify-end gap-2">
           <input type="hidden" name="documentId" value={documentId} />
-          <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
+          <Button type="button" variant="secondary" size="touch" onClick={() => setOpen(false)}>
             Cancel
           </Button>
-          <Button type="submit" variant="danger" loading={pending}>
+          <Button type="submit" variant="danger" size="touch" loading={pending}>
             Delete document
           </Button>
         </form>

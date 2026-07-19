@@ -39,7 +39,7 @@ export function ResolveForm({ escalationId }: { escalationId: string }) {
         </p>
       ) : null}
       <div>
-        <Button type="submit" variant="primary" loading={pending}>
+        <Button type="submit" variant="primary" size="touch" loading={pending}>
           Mark resolved
         </Button>
       </div>

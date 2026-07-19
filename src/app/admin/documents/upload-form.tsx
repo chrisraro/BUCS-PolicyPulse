@@ -4,6 +4,7 @@ import * as React from 'react'
 import { useActionState } from 'react'
 import { Button } from '@/components/ui/button'
 import { initialActionState } from '../_lib/action-state'
+import { shouldResetForm } from '../_lib/form-reset'
 import { uploadDocument } from './actions'
 
 const AUDIENCES = [
@@ -22,17 +23,23 @@ export function UploadForm() {
   const [titleTouched, setTitleTouched] = React.useState(false)
   const formRef = React.useRef<HTMLFormElement>(null)
 
-  // Reset the controlled title on a successful upload. Comparing against the
-  // previous status during render (rather than in an effect) is the pattern
-  // React recommends for "adjust state when a value changes" — it avoids an
-  // extra render pass. See react.dev "You Might Not Need an Effect".
-  const [prevStatus, setPrevStatus] = React.useState(state.status)
-  if (prevStatus !== state.status) {
-    setPrevStatus(state.status)
-    if (state.status === 'success') {
-      setTitle('')
-      setTitleTouched(false)
-    }
+  // Reset the controlled title on every DISTINCT successful upload. Adjusting
+  // state during render (rather than in an effect) is the pattern React
+  // recommends for "adjust state when a value changes" — it avoids an extra
+  // render pass. See react.dev "You Might Not Need an Effect".
+  //
+  // We track the previous *state object* rather than just `state.status`:
+  // two consecutive successful uploads both report status 'success', so a
+  // plain status comparison would never notice the second completion, and
+  // the title field (plus titleTouched) would keep showing the first
+  // upload's title. Each server action call returns a fresh object, so
+  // comparing identity reliably distinguishes a new completion from an
+  // unrelated re-render of the same result.
+  const [prevState, setPrevState] = React.useState(state)
+  if (shouldResetForm({ seen: prevState }, { state, status: state.status })) {
+    setPrevState(state)
+    setTitle('')
+    setTitleTouched(false)
   }
 
   // The native file input / audience checkboxes are uncontrolled — resetting

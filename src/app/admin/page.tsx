@@ -65,8 +65,7 @@ export default async function AdminDashboardPage() {
     { label: 'Total users', value: counts.totalUsers },
     { label: 'Chats (last 7 days)', value: counts.chats7d },
     { label: 'Messages (last 7 days)', value: counts.messages7d },
-    { label: '👍 Helpful ratings', value: counts.thumbsUp },
-    { label: '👎 Not-helpful ratings', value: counts.thumbsDown },
+    { label: 'Feedback (helpful / not helpful)', value: `${counts.thumbsUp} / ${counts.thumbsDown}` },
     { label: 'Open escalations', value: counts.openEscalations },
     { label: 'Indexed documents', value: counts.indexedDocuments },
   ]

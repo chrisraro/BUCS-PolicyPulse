@@ -111,6 +111,7 @@ export async function reindexDocument(_prev: ActionState, formData: FormData): P
     return { status: 'success', message: `Re-indexed with ${chunkCount} chunk${chunkCount === 1 ? '' : 's'}.` }
   } catch (e) {
     revalidatePath('/admin/documents')
+    revalidatePath('/admin')
     return { status: 'error', message: e instanceof Error ? e.message : 'Re-index failed.' }
   }
 }
@@ -136,12 +137,16 @@ export async function deleteDocument(_prev: ActionState, formData: FormData): Pr
     return { status: 'error', message: 'Document not found.' }
   }
 
-  await admin.storage.from(BUCKET).remove([doc.storage_path as string])
-
+  // Delete the DB row first (chunks cascade from it). If storage removal
+  // below then fails, the worst outcome is an orphaned file sitting in a
+  // private bucket — harmless. Doing it in the other order risks a document
+  // row left pointing at a storage object that no longer exists.
   const { error: deleteError } = await admin.from('documents').delete().eq('id', documentId)
   if (deleteError) {
     return { status: 'error', message: `Delete failed: ${deleteError.message}` }
   }
+
+  await admin.storage.from(BUCKET).remove([doc.storage_path as string])
 
   revalidatePath('/admin/documents')
   revalidatePath('/admin')
